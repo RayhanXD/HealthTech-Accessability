@@ -1,0 +1,363 @@
+# Texas Convergent - HealthTech Platform
+
+<div align="center">
+  <img src="https://via.placeholder.com/200x100/0066cc/ffffff?text=TX+Convergent" alt="Texas Convergent Logo" width="200"/>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org/)
+  [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-org/convergent)
+  [![Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/your-org/convergent)
+</div>
+
+## 🏥 About
+
+The Texas Convergent HealthTech Platform is an innovative healthcare technology solution developed by students at the University of Texas at Austin. Our mission is to bridge the gap between technology and healthcare accessibility, creating tools that empower both healthcare providers and patients.
+
+### 🎯 Mission Statement
+To leverage cutting-edge technology in improving healthcare outcomes, accessibility, and patient experience while fostering innovation in the health technology space.
+
+## ✨ Features
+
+- **🔐 Secure Authentication**: Multi-factor authentication with role-based access control
+- **📊 Health Analytics Dashboard**: Real-time health metrics visualization and tracking
+- **👥 Patient Management**: Comprehensive patient record management system
+- **📱 Mobile-First Design**: Responsive design optimized for all devices
+- **🔒 HIPAA Compliance**: Full compliance with healthcare privacy regulations
+- **📈 Data Visualization**: Interactive charts and reports for health insights
+- **🔔 Smart Notifications**: Automated alerts and reminders for patients and providers
+- **🌐 Telemedicine Integration**: Video consultation and remote monitoring capabilities
+- **📋 Electronic Health Records (EHR)**: Secure and accessible digital health records
+- **🤖 AI-Powered Insights**: Machine learning algorithms for predictive health analytics
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+- **Node.js** (v16.0.0 or higher)
+- **npm** or **yarn**
+- **Git**
+- **Docker** (optional, for containerized deployment)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/texas-convergent/healthtech-platform.git
+   cd healthtech-platform
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` with your configuration:
+   ```env
+   # Database
+   DATABASE_URL=postgresql://username:password@localhost:5432/convergent_db
+   
+   # Authentication
+   JWT_SECRET=your-super-secret-jwt-key
+   AUTH0_DOMAIN=your-auth0-domain.auth0.com
+   AUTH0_CLIENT_ID=your-auth0-client-id
+   
+   # API Keys
+   TWILIO_ACCOUNT_SID=your-twilio-sid
+   SENDGRID_API_KEY=your-sendgrid-key
+   
+   # Environment
+   NODE_ENV=development
+   PORT=3000
+   ```
+
+4. **Database Setup**
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   Navigate to `http://localhost:3000`
+
+## 🏗️ Tech Stack
+
+### Frontend
+- **React.js** - Modern JavaScript library for building user interfaces
+- **TypeScript** - Type-safe JavaScript development
+- **Next.js** - React framework for production-grade applications
+- **Tailwind CSS** - Utility-first CSS framework
+- **Chart.js** - Data visualization library
+- **React Query** - Data fetching and state management
+
+### Backend
+- **Node.js** - JavaScript runtime environment
+- **Express.js** - Web application framework
+- **PostgreSQL** - Relational database management system
+- **Prisma** - Next-generation ORM for Node.js
+- **Redis** - In-memory data structure store for caching
+- **Socket.io** - Real-time bidirectional event-based communication
+
+### DevOps & Infrastructure
+- **Docker** - Containerization platform
+- **AWS** - Cloud infrastructure services
+- **GitHub Actions** - CI/CD pipeline
+- **Nginx** - Web server and reverse proxy
+- **Let's Encrypt** - SSL certificate management
+
+### Security & Compliance
+- **Auth0** - Identity and access management
+- **Helmet.js** - Security middleware for Express
+- **bcrypt** - Password hashing
+- **Rate limiting** - API protection
+- **OWASP** - Security best practices
+
+## 📁 Project Structure
+
+```
+convergent/
+├── client/                 # Frontend React application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/          # Application pages
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── utils/          # Utility functions
+│   │   ├── types/          # TypeScript type definitions
+│   │   └── styles/         # Global styles and themes
+│   ├── public/             # Static assets
+│   └── package.json
+├── server/                 # Backend Node.js application
+│   ├── src/
+│   │   ├── controllers/    # Route controllers
+│   │   ├── middleware/     # Express middleware
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API routes
+│   │   ├── services/       # Business logic services
+│   │   └── utils/          # Server utilities
+│   ├── prisma/             # Database schema and migrations
+│   └── package.json
+├── docs/                   # Documentation
+├── scripts/                # Build and deployment scripts
+├── docker-compose.yml      # Docker configuration
+└── README.md
+```
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev          # Start development server
+npm run dev:client   # Start frontend only
+npm run dev:server   # Start backend only
+
+# Building
+npm run build        # Build for production
+npm run build:client # Build frontend
+npm run build:server # Build backend
+
+# Testing
+npm run test         # Run all tests
+npm run test:client  # Run frontend tests
+npm run test:server  # Run backend tests
+npm run test:e2e     # Run end-to-end tests
+
+# Database
+npm run db:migrate   # Run database migrations
+npm run db:seed      # Seed database with sample data
+npm run db:reset     # Reset database
+npm run db:studio    # Open Prisma Studio
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint issues
+npm run format       # Format code with Prettier
+npm run type-check   # TypeScript type checking
+```
+
+### Git Workflow
+
+We follow the [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/) branching model:
+
+1. **Feature branches**: `feature/feature-name`
+2. **Bug fixes**: `bugfix/bug-description`
+3. **Releases**: `release/version-number`
+4. **Hotfixes**: `hotfix/critical-fix`
+
+### Code Style
+
+- We use **ESLint** and **Prettier** for code formatting
+- Follow **TypeScript** best practices
+- Use **conventional commits** for commit messages
+- Maintain **test coverage** above 80%
+
+## 🧪 Testing
+
+Our testing strategy includes:
+
+- **Unit Tests**: Jest and React Testing Library
+- **Integration Tests**: Supertest for API testing
+- **End-to-End Tests**: Cypress for user workflow testing
+- **Performance Tests**: Lighthouse CI for performance monitoring
+
+```bash
+# Run specific test suites
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+npm run test:coverage    # Generate coverage report
+```
+
+## 🚀 Deployment
+
+### Production Deployment
+
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy using Docker**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+3. **Or deploy to cloud platforms**
+   - **Vercel** (Frontend)
+   - **Heroku** (Backend)
+   - **AWS EC2/ECS** (Full stack)
+   - **DigitalOcean** (Droplets)
+
+### Environment Variables
+
+Ensure all production environment variables are properly configured:
+- Database connection strings
+- API keys and secrets
+- Authentication providers
+- Third-party service configurations
+
+## 📚 API Documentation
+
+Our API follows RESTful principles and includes comprehensive documentation.
+
+### Base URL
+```
+Production: https://api.convergent.health
+Development: http://localhost:3001/api
+```
+
+### Authentication
+All API requests require authentication via JWT tokens:
+```bash
+Authorization: Bearer <your-jwt-token>
+```
+
+### Key Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | User authentication |
+| GET | `/patients` | Retrieve patient list |
+| POST | `/patients` | Create new patient |
+| GET | `/patients/:id` | Get patient details |
+| PUT | `/patients/:id` | Update patient |
+| GET | `/analytics/dashboard` | Health analytics data |
+
+For complete API documentation, visit: [API Docs](https://docs.convergent.health)
+
+## 🤝 Contributing
+
+We welcome contributions from the Texas Convergent community! Here's how to get started:
+
+### Getting Started
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. **Make your changes**
+4. **Add tests** for your changes
+5. **Commit your changes**
+   ```bash
+   git commit -m 'feat: add amazing feature'
+   ```
+6. **Push to your branch**
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+7. **Open a Pull Request**
+
+### Contribution Guidelines
+
+- Follow our [Code of Conduct](CODE_OF_CONDUCT.md)
+- Ensure all tests pass
+- Update documentation as needed
+- Follow our coding standards
+- Write meaningful commit messages
+
+### Issue Reporting
+
+Found a bug or have a feature request? Please check our [issue tracker](https://github.com/texas-convergent/healthtech-platform/issues) and create a new issue if needed.
+
+## 👥 Team
+
+### Core Team
+- **Project Lead**: [Name] - [@github-username](https://github.com/username)
+- **Technical Lead**: [Name] - [@github-username](https://github.com/username)
+- **Frontend Lead**: [Name] - [@github-username](https://github.com/username)
+- **Backend Lead**: [Name] - [@github-username](https://github.com/username)
+- **UI/UX Designer**: [Name] - [@github-username](https://github.com/username)
+
+### Contributors
+Thanks to all our amazing contributors! 🙏
+
+<a href="https://github.com/texas-convergent/healthtech-platform/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=texas-convergent/healthtech-platform" />
+</a>
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links
+
+- **Website**: [https://convergent.health](https://convergent.health)
+- **Documentation**: [https://docs.convergent.health](https://docs.convergent.health)
+- **Texas Convergent**: [https://texasconvergent.org](https://texasconvergent.org)
+- **University of Texas at Austin**: [https://utexas.edu](https://utexas.edu)
+
+## 📞 Support
+
+Need help or have questions?
+
+- **Email**: support@convergent.health
+- **Slack**: [#convergent-support](https://texasconvergent.slack.com/channels/convergent-support)
+- **Office Hours**: Tuesdays 6-8 PM CST (Virtual)
+- **Issues**: [GitHub Issues](https://github.com/texas-convergent/healthtech-platform/issues)
+
+## 🙏 Acknowledgments
+
+- **Texas Convergent** - For providing the platform and community
+- **University of Texas at Austin** - For institutional support
+- **Healthcare Partners** - For domain expertise and guidance
+- **Open Source Community** - For the amazing tools and libraries
+
+---
+
+<div align="center">
+  <p><strong>Built with ❤️ by Texas Convergent</strong></p>
+  <p><em>Empowering Healthcare Through Technology</em></p>
+</div>
