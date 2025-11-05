@@ -1,20 +1,20 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: convergent-postgres
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: convergent-mongodb
     environment:
-      POSTGRES_DB: convergent_db
-      POSTGRES_USER: convergent_user
-      POSTGRES_PASSWORD: convergent_password
+      MONGO_INITDB_ROOT_USERNAME: convergent_user
+      MONGO_INITDB_ROOT_PASSWORD: convergent_password
+      MONGO_INITDB_DATABASE: convergent_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongodb_data:/data/db
     ports:
-      - "5432:5432"
+      - "27017:27017"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U convergent_user -d convergent_db"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,12 +42,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://convergent_user:convergent_password@postgres:5432/convergent_db
+      MONGODB_URI: mongodb://convergent_user:convergent_password@mongodb:27017/convergent_db?authSource=admin
       REDIS_URL: redis://redis:6379
     ports:
       - "3001:3001"
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  mongodb_data:
   redis_data:
 
 networks:

@@ -1,23 +1,5 @@
-# Server Dockerfile for Texas Convergent HealthTech Platform
-FROM node:18-alpine AS build
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine AS production
+# Server Dockerfile for Convergent HealthTech Platform
+FROM node:18-alpine
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init curl
@@ -29,12 +11,14 @@ RUN adduser -S convergent -u 1001
 # Set working directory
 WORKDIR /app
 
-# Copy built application and package files
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package*.json ./
+# Copy package files
+COPY package*.json ./
 
-# Install production dependencies only
+# Install dependencies
 RUN npm ci --only=production && npm cache clean --force
+
+# Copy source code
+COPY . .
 
 # Change ownership to app user
 RUN chown -R convergent:nodejs /app
