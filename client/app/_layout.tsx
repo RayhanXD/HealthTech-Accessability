@@ -74,7 +74,7 @@ export default function RootLayout() {
           ...smoothTransition,
           gestureEnabled: true,
           gestureDirection: 'horizontal',
-          animationEnabled: true,
+          animation: 'default',
         }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="gender-selection" />
