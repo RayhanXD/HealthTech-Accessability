@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, SyntraColors } from '@/constants/theme';
 
 interface WelcomeScreenProps {
   onSignUp?: () => void;
@@ -52,7 +52,10 @@ export default function WelcomeScreen({
       
       {/* Main Content */}
       <View style={styles.mainContent}>
-        <Text style={styles.title}>Welcome to Syntra</Text>
+        <Text style={styles.title}>
+        Welcome to <Text style={styles.titleHighlight}>Syntra</Text>
+        </Text>
+
       </View>
 
       {/* Action Buttons */}
@@ -95,6 +98,10 @@ const styles = StyleSheet.create({
     color: BrandColors.white,
     textAlign: 'center',
   },
+  titleHighlight: {
+  color: SyntraColors.purple,
+
+},
   actionButtonsSection: {
     paddingHorizontal: 32,
     paddingBottom: 32,
@@ -107,7 +114,7 @@ const styles = StyleSheet.create({
     maxWidth: 293,
     height: 43,
     borderRadius: 15,
-    backgroundColor: BrandColors.purpleDark,
+    backgroundColor: SyntraColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -128,13 +135,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   signInText: {
-    color: BrandColors.white,
+    color: SyntraColors.purple,
     fontSize: 14,
     letterSpacing: 0.2,
     lineHeight: 19.6,
   },
   signInLink: {
-    color: BrandColors.purple,
+    color: SyntraColors.white,
     fontSize: 14,
     fontWeight: '500',
     letterSpacing: 0.2,
