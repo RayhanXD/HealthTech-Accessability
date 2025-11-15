@@ -1,11 +1,13 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { Easing } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { configureSahha } from '@/lib/sahha/sahhaConfig';
 
 export const unstable_settings = {
   // Removed anchor to allow root index.tsx to be the first screen
@@ -66,6 +68,13 @@ const smoothTransition = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  // Configure Sahha SDK immediately upon app launch
+  useEffect(() => {
+    configureSahha().catch((error) => {
+      console.error('Failed to configure Sahha SDK at app launch:', error);
+    });
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack
@@ -74,7 +83,7 @@ export default function RootLayout() {
           ...smoothTransition,
           gestureEnabled: true,
           gestureDirection: 'horizontal',
-          animation: 'default',
+          animation: 'slide_from_right',
         }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="gender-selection" />

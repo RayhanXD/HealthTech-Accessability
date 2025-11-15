@@ -14,11 +14,14 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { LineChart } from 'react-native-chart-kit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
+import { useSahha } from '@/lib/sahha/useSahha';
 
 export default function AthleteDashboardScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [playerId, setPlayerId] = useState<string | null>(null);
   const router = useRouter();
   const iconAnim = useRef(new Animated.Value(0)).current; // 0 = hamburger, 1 = X
 
@@ -38,6 +41,35 @@ export default function AthleteDashboardScreen() {
       }).start();
     }
   }, [settingsVisible]);
+
+  // Get playerId from AsyncStorage or API
+  useEffect(() => {
+    const loadPlayerId = async () => {
+      try {
+        // Try to get playerId from AsyncStorage
+        const storedPlayerId = await AsyncStorage.getItem('playerId');
+        if (storedPlayerId) {
+          setPlayerId(storedPlayerId);
+        } else {
+          // TODO: Fetch playerId from your API after user login
+          // Example: const response = await fetch('/api/user/me');
+          // const user = await response.json();
+          // setPlayerId(user.id);
+          console.log('⚠️ PlayerId not found. Sahha will not initialize until playerId is available.');
+        }
+      } catch (error) {
+        console.error('Error loading playerId:', error);
+      }
+    };
+    loadPlayerId();
+  }, []);
+
+  // Initialize Sahha when playerId is available
+  const { isInitialized, isLoading, error: sahhaError } = useSahha({
+    playerId: playerId || undefined,
+    apiBaseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001',
+    autoInitialize: !!playerId,
+  });
 
   const handleBack = () => {
     router.back();
