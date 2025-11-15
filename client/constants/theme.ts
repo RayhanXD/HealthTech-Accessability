@@ -21,6 +21,13 @@ export const BrandColors = {
   cardGray: '#DBDBDB',
 };
 
+export const SyntraColors = {
+  purpleLight: '#D4C5F0',
+  purpleDark: '#8B5CF6',
+  purple: '#B89EF6',
+  white: '#FFFFFF',
+};
+
 // Semantic Color Tokens
 export const SemanticColors = {
   // Primary brand colors

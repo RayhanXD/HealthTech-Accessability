@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Animated } from 'react-native';
 import {
   View,
   Text,
@@ -22,6 +23,24 @@ export default function AthleteDashboardScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const router = useRouter();
+  const iconAnim = useRef(new Animated.Value(0)).current; // 0 = hamburger, 1 = X
+
+  // Animate icon when settings modal opens/closes
+  useEffect(() => {
+    if (settingsVisible) {
+      Animated.timing(iconAnim, {
+        toValue: 1, // Animate to X
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(iconAnim, {
+        toValue: 0, // Animate back to hamburger
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [settingsVisible]);
 
   // Get playerId from AsyncStorage or API
   useEffect(() => {
@@ -93,15 +112,75 @@ export default function AthleteDashboardScreen() {
         
         {/* Top Navigation Bar */}
         <View style={styles.navBar}>
-          <Text style={styles.navTitle}>Welcome, Athlete</Text>
           <View style={styles.navIcons}>
             <TouchableOpacity
-              onPress={() => setSettingsVisible(true)}
+              onPress={() => setSettingsVisible(!settingsVisible)}
               style={styles.iconButton}
               activeOpacity={0.7}>
-              <Text style={styles.iconEmoji}>⚙️</Text>
+              <View style={styles.iconContainer}>
+                {/* Hamburger icon */}
+                <Animated.View
+                  style={[
+                    styles.iconWrapper,
+                    {
+                      opacity: iconAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 0],
+                      }),
+                      transform: [
+                        {
+                          rotate: iconAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '90deg'],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M3 12H21M3 6H21M3 18H21"
+                      stroke={BrandColors.white}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </Animated.View>
+                {/* X icon */}
+                <Animated.View
+                  style={[
+                    styles.iconWrapper,
+                    {
+                      position: 'absolute',
+                      opacity: iconAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 1],
+                      }),
+                      transform: [
+                        {
+                          rotate: iconAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['-90deg', '0deg'],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289Z"
+                      fill={BrandColors.white}
+                    />
+                  </Svg>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
           </View>
+          <Text style={styles.navTitle}>Welcome, Athlete</Text>
+          <View style={styles.navIcons} />
         </View>
 
         {/* Overall Health Score */}
@@ -307,6 +386,7 @@ const styles = StyleSheet.create({
     color: SemanticColors.primary,
     fontSize: 32,
     fontWeight: Typography.fontWeight.semibold as any,
+    textAlign: 'center',
   },
   navIcons: {
     flexDirection: 'row',
@@ -316,8 +396,16 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: Spacing.xs,
   },
-  iconEmoji: {
-    fontSize: Typography.fontSize.lg,
+  iconContainer: {
+    width: 24,
+    height: 24,
+    position: 'relative',
+  },
+  iconWrapper: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
