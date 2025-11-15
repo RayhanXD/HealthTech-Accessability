@@ -8,8 +8,8 @@ import { Platform } from 'react-native';
 
 // Base Brand Colors
 export const BrandColors = {
-  purple: '#8B5CF6',
-  purpleDark: '#7C3AED',
+  purple: '#B89EF6',//'#8B5CF6',
+  purpleDark: '#915fe7ff',
   green: '#78E66C',
   white: '#FFFFFF',
   black: '#000000',
@@ -21,12 +21,6 @@ export const BrandColors = {
   cardGray: '#DBDBDB',
 };
 
-export const SyntraColors = {
-  purpleLight: '#D4C5F0',
-  purpleDark: '#8B5CF6',
-  purple: '#B89EF6',
-  white: '#FFFFFF',
-};
 
 // Semantic Color Tokens
 export const SemanticColors = {

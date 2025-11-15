@@ -113,7 +113,7 @@ export default function CreateAccountScreen({
           <Svg width={74} height={3} viewBox="0 0 77 3" fill="none">
             <Path
               d="M1.5 1.5H75.5"
-              stroke="#8E55E3"
+              stroke={BrandColors.purple}
               strokeWidth="3"
               strokeLinecap="round"
             />
@@ -153,7 +153,7 @@ export default function CreateAccountScreen({
             <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
               <Path
                 d="M0.75 0.75H343.75"
-                stroke="#8E55E3"
+                stroke={BrandColors.purple}
                 strokeWidth="1.5"
                 strokeLinecap="round"
               />
@@ -337,10 +337,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: SemanticColors.primary,
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    backgroundColor: BrandColors.black,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

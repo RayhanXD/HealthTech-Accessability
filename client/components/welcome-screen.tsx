@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BrandColors, SyntraColors } from '@/constants/theme';
+import { BrandColors} from '@/constants/theme';
 
 interface WelcomeScreenProps {
   onSignUp?: () => void;
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   titleHighlight: {
-  color: SyntraColors.purple,
+  color: BrandColors.purple,
 
 },
   actionButtonsSection: {
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     maxWidth: 293,
     height: 43,
     borderRadius: 15,
-    backgroundColor: SyntraColors.purple,
+    backgroundColor: BrandColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -135,13 +135,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   signInText: {
-    color: SyntraColors.purple,
+    color: BrandColors.purple,
     fontSize: 14,
     letterSpacing: 0.2,
     lineHeight: 19.6,
   },
   signInLink: {
-    color: SyntraColors.white,
+    color: BrandColors.white,
     fontSize: 14,
     fontWeight: '500',
     letterSpacing: 0.2,
