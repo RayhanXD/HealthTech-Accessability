@@ -5,13 +5,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  Dimensions,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, SemanticColors } from '@/constants/theme';
+import AnimatedProgressBar from './animated-progress-bar';
 
 interface CreateAccountScreenProps {
   onCreateAccount?: (email: string, password: string) => void;
@@ -67,11 +69,18 @@ export default function CreateAccountScreen({
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Status Bar - Empty to maintain spacing */}
-      <View style={styles.statusBar} />
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Calculate status bar height dynamically
+  const statusBarHeight = Platform.OS === 'ios' 
+    ? (screenHeight >= 812 ? 44 : 20) + 12
+    : (StatusBar.currentHeight || 0) + 12;
 
+  return (
+    <View style={styles.container}>
+      {/* Dynamic top spacing to prevent status bar overlap */}
+      <View style={{ height: statusBarHeight }} />
+      
       {/* Back Button & Progress Bar */}
       <View style={styles.progressSection}>
         <View style={styles.progressRow}>
@@ -79,7 +88,7 @@ export default function CreateAccountScreen({
             <Svg width={34} height={37} viewBox="0 0 34 37" fill="none">
               <Path
                 d="M21 12L13 18.5L21 25"
-                stroke="black"
+                stroke="white"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -87,8 +96,12 @@ export default function CreateAccountScreen({
             </Svg>
           </TouchableOpacity>
           <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground} />
-            <View style={styles.progressBarFill} />
+            <AnimatedProgressBar
+              width={155}
+              backgroundColor={SemanticColors.success}
+              backgroundBarColor={SemanticColors.borderSecondary}
+              borderRadius={3}
+            />
           </View>
         </View>
       </View>
@@ -131,7 +144,7 @@ export default function CreateAccountScreen({
                 value={email}
                 onChangeText={setEmail}
                 placeholder="example@email.com"
-                placeholderTextColor={BrandColors.white}
+                placeholderTextColor={SemanticColors.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -173,7 +186,7 @@ export default function CreateAccountScreen({
                   value={password}
                   onChangeText={setPassword}
                   placeholder="enter your password"
-                  placeholderTextColor={BrandColors.white}
+                  placeholderTextColor={SemanticColors.textTertiary}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -257,7 +270,7 @@ export default function CreateAccountScreen({
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   placeholder="enter your password"
-                  placeholderTextColor={BrandColors.white}
+                  placeholderTextColor={SemanticColors.textTertiary}
                   secureTextEntry={!showConfirmPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -304,22 +317,14 @@ export default function CreateAccountScreen({
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BrandColors.black,
-  },
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    ...(Platform.OS === 'ios' && { paddingTop: 8 }),
+    backgroundColor: SemanticColors.background,
   },
   progressSection: {
     paddingHorizontal: 17,
@@ -335,7 +340,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BrandColors.white,
+    backgroundColor: SemanticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -346,24 +351,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: 3,
     overflow: 'hidden',
-  },
-  progressBarBackground: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: BrandColors.white,
-    borderRadius: 3,
-  },
-  progressBarFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: '100%',
-    width: 155,
-    backgroundColor: BrandColors.green,
-    borderRadius: 3,
   },
   mainContent: {
     flex: 1,
@@ -379,7 +366,7 @@ const styles = StyleSheet.create({
     fontSize: 38,
     lineHeight: 41.8,
     fontWeight: '500',
-    color: BrandColors.white,
+    color: SemanticColors.textPrimary,
     marginBottom: 8,
   },
   fieldContainer: {
@@ -392,7 +379,7 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   label: {
-    color: BrandColors.white,
+    color: SemanticColors.textPrimary,
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 12,
@@ -419,7 +406,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: 'transparent',
-    color: BrandColors.white,
+    color: SemanticColors.textPrimary,
     fontSize: 14,
   },
   eyeButton: {
@@ -449,10 +436,10 @@ const styles = StyleSheet.create({
     width: 111,
   },
   strengthBarActive: {
-    backgroundColor: BrandColors.green,
+    backgroundColor: SemanticColors.success,
   },
   strongPasswordText: {
-    color: BrandColors.green,
+    color: SemanticColors.success,
     fontSize: 12,
     fontWeight: '500',
     letterSpacing: 0.2,
@@ -462,7 +449,7 @@ const styles = StyleSheet.create({
     maxWidth: 343,
     height: 49,
     borderRadius: 12,
-    backgroundColor: BrandColors.purple,
+    backgroundColor: SemanticColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -470,17 +457,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   createButtonDisabled: {
-    backgroundColor: '#4B5563',
+    backgroundColor: SemanticColors.surfaceSecondary,
     opacity: 0.5,
   },
   createButtonText: {
-    color: BrandColors.lightGray,
+    color: SemanticColors.textOnPrimary,
     fontWeight: '600',
     fontSize: 18,
     letterSpacing: 0.2,
     lineHeight: 25.2,
   },
   createButtonTextDisabled: {
-    color: '#9CA3AF',
+    color: SemanticColors.textTertiary,
   },
 });

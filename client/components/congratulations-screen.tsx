@@ -4,13 +4,15 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  Dimensions,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path, Ellipse, Circle } from 'react-native-svg';
 import { BrandColors } from '@/constants/theme';
+import AnimatedProgressBar from './animated-progress-bar';
 
 interface CongratulationsScreenProps {
   userName?: string;
@@ -37,11 +39,18 @@ export default function CongratulationsScreen({
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Status Bar - Empty to maintain spacing */}
-      <View style={styles.statusBar} />
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Calculate status bar height dynamically
+  const statusBarHeight = Platform.OS === 'ios' 
+    ? (screenHeight >= 812 ? 44 : 20) + 12
+    : (StatusBar.currentHeight || 0) + 12;
 
+  return (
+    <View style={styles.container}>
+      {/* Dynamic top spacing to prevent status bar overlap */}
+      <View style={{ height: statusBarHeight }} />
+      
       {/* Back Button & Full Progress Bar */}
       <View style={styles.progressSection}>
         <View style={styles.progressRow}>
@@ -49,7 +58,7 @@ export default function CongratulationsScreen({
             <Svg width={34} height={37} viewBox="0 0 34 37" fill="none">
               <Path
                 d="M21 12L13 18.5L21 25"
-                stroke="black"
+                stroke="white"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -57,8 +66,12 @@ export default function CongratulationsScreen({
             </Svg>
           </TouchableOpacity>
           <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground} />
-            <View style={styles.progressBarFill} />
+            <AnimatedProgressBar
+              width={306}
+              backgroundColor={BrandColors.green}
+              backgroundBarColor={BrandColors.white}
+              borderRadius={3}
+            />
           </View>
         </View>
       </View>
@@ -119,7 +132,7 @@ export default function CongratulationsScreen({
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -127,14 +140,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: BrandColors.black,
-  },
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    ...(Platform.OS === 'ios' && { paddingTop: 8 }),
   },
   progressSection: {
     paddingHorizontal: 17,
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BrandColors.white,
+    backgroundColor: BrandColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -161,24 +166,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderRadius: 3,
     overflow: 'hidden',
-  },
-  progressBarBackground: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: BrandColors.white,
-    borderRadius: 3,
-  },
-  progressBarFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    height: '100%',
-    width: 306,
-    backgroundColor: BrandColors.green,
-    borderRadius: 3,
   },
   headingSection: {
     paddingHorizontal: 32,

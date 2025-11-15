@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  Platform,
   ScrollView,
+  Dimensions,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { BrandColors } from '@/constants/theme';
+import { PieChart, BarChart } from 'react-native-chart-kit';
+import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
+import SettingsModal from './settings-modal';
 
 type FilterStatus = 'all' | 'healthy' | 'injured' | 'suspended';
 
@@ -38,6 +41,7 @@ const athletes: Athlete[] = [
 export default function CoachDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const router = useRouter();
 
   const filteredAthletes = athletes.filter((athlete) => {
@@ -47,38 +51,88 @@ export default function CoachDashboardScreen() {
     return matchesSearch && matchesFilter;
   });
 
+  // Calculate pie chart data from athletes
+  const pieChartData = useMemo(() => {
+    const statusCounts = athletes.reduce((acc, athlete) => {
+      const status = athlete.status.toLowerCase();
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      {
+        name: 'Healthy',
+        population: statusCounts.healthy || 0,
+        color: '#8CD47E',
+        legendFontColor: BrandColors.white,
+        legendFontSize: 12,
+      },
+      {
+        name: 'Injured',
+        population: statusCounts.injured || 0,
+        color: '#FF6961',
+        legendFontColor: BrandColors.white,
+        legendFontSize: 12,
+      },
+      {
+        name: 'Suspended',
+        population: statusCounts.suspended || 0,
+        color: '#F8D66D',
+        legendFontColor: BrandColors.white,
+        legendFontSize: 12,
+      },
+    ].filter(item => item.population > 0);
+  }, []);
+
+  // Bar chart data
+  const barChartData = {
+    labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'],
+    datasets: [
+      {
+        data: [82, 59, 10, 61, 48, 73, 54],
+      },
+    ],
+  };
+
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  
+  // Calculate status bar height dynamically
+  // For iOS: detect notched devices (iPhone X and later) vs older devices
+  const statusBarHeight = Platform.OS === 'ios' 
+    ? (screenHeight >= 812 ? 44 : 20) + 12 // 44px for notched devices (X, 11, 12, 13, 14, 15, etc.), 20px for older, plus 12px extra
+    : (StatusBar.currentHeight || 0) + 12;
+
   const handleBack = () => {
     router.back();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Status Bar - Empty to maintain spacing */}
-      <View style={styles.statusBar} />
-
-      {/* Top Navigation Bar */}
-      <View style={styles.navBar}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButtonNav}>
-          <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-            <Path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M16.7071 3.29289C16.3166 2.90237 15.6834 2.90237 15.2929 3.29289L7.29289 11.2929C6.90237 11.6834 6.90237 12.3166 7.29289 12.7071L15.2929 20.7071C15.6834 21.0976 16.3166 21.0976 16.7071 20.7071C17.0976 20.3166 17.0976 19.6834 16.7071 19.2929L9.41421 12L16.7071 4.70711C17.0976 4.31658 17.0976 3.68342 16.7071 3.29289Z"
-              fill="white"
-            />
-          </Svg>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>Coach Dashboard</Text>
-        <View style={styles.navIcons}>
-          <Text style={styles.iconEmoji}>📊</Text>
-          <Text style={styles.iconEmoji}>⚙️</Text>
-        </View>
-      </View>
+    <View style={styles.container}>
+      <SettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+      />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+        {/* Dynamic top spacing to prevent status bar overlap */}
+        <View style={{ height: statusBarHeight }} />
+        
+        {/* Top Navigation Bar */}
+        <View style={styles.navBar}>
+          <Text style={styles.navTitle}>Welcome, Coach</Text>
+          <View style={styles.navIcons}>
+            <TouchableOpacity
+              onPress={() => setSettingsVisible(true)}
+              style={styles.iconButton}
+              activeOpacity={0.7}>
+              <Text style={styles.iconEmoji}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Team Analytics */}
         <View style={styles.teamAnalyticsSection}>
           <Text style={styles.sectionTitle}>Team Analytics</Text>
@@ -102,21 +156,22 @@ export default function CoachDashboardScreen() {
             <Text style={styles.distributionTitle}>Athlete Status Distribution</Text>
             <Text style={styles.distributionSubtitle}>Count</Text>
             <View style={styles.pieChartContainer}>
-              <Svg width={180} height={180} viewBox="0 0 312 180" fill="none">
-                <Path
-                  d="M226 90C226 128.66 194.66 160 156 160C117.34 160 86 128.66 86 90C86 51.3401 117.34 20 156 20C194.66 20 226 51.3401 226 90Z"
-                  fill="#8CD47E"
-                  fillOpacity="0.866667"
-                />
-                <Path
-                  d="M156 20C165.193 20 174.295 21.8106 182.788 25.3284C191.281 28.8463 198.997 34.0024 205.497 40.5025L156 90V20Z"
-                  fill="#F8D66D"
-                />
-                <Path
-                  d="M205.497 40.5025C211.998 47.0026 217.154 54.7194 220.672 63.2122C224.189 71.705 226 80.8075 226 90C226 99.1925 224.189 108.295 220.672 116.788C217.154 125.281 211.998 132.997 205.497 139.497L156 90L205.497 40.5025Z"
-                  fill="#FF6961"
-                />
-              </Svg>
+              <PieChart
+                data={pieChartData}
+                width={screenWidth - 72}
+                height={200}
+                chartConfig={{
+                  backgroundColor: BrandColors.black,
+                  backgroundGradientFrom: BrandColors.black,
+                  backgroundGradientTo: BrandColors.black,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                }}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
             </View>
             <Text style={styles.distributionLabel}>Status</Text>
           </View>
@@ -128,29 +183,43 @@ export default function CoachDashboardScreen() {
             <Text style={styles.performanceTitle}>Team Performance Metrics</Text>
             <Text style={styles.performanceSubtitle}>Scores</Text>
             <View style={styles.barChartContainer}>
-              {/* Grid lines */}
-              <Svg
-                style={StyleSheet.absoluteFill}
-                width="100%"
-                height="100%"
-                viewBox="0 0 345 160"
-                preserveAspectRatio="none">
-                <Path d="M0 0.5H345" stroke="white" strokeDasharray="3 3" />
-                <Path d="M0 40.5H345" stroke="white" strokeDasharray="3 3" />
-                <Path d="M0 80.5H345" stroke="white" strokeDasharray="3 3" />
-                <Path d="M0 120.5H345" stroke="white" strokeDasharray="3 3" />
-                <Path d="M0 159.5H345" stroke="white" />
-              </Svg>
-              {/* Bar chart bars */}
-              <View style={styles.barChartBars}>
-                <View style={[styles.bar, { height: 131 }]} />
-                <View style={[styles.bar, { height: 94 }]} />
-                <View style={[styles.bar, { height: 16 }]} />
-                <View style={[styles.bar, { height: 98 }]} />
-                <View style={[styles.bar, { height: 76 }]} />
-                <View style={[styles.bar, { height: 117 }]} />
-                <View style={[styles.bar, { height: 87 }]} />
-              </View>
+              <BarChart
+                data={barChartData}
+                width={screenWidth - 72}
+                height={180}
+                chartConfig={{
+                  backgroundColor: BrandColors.black,
+                  backgroundGradientFrom: BrandColors.black,
+                  backgroundGradientTo: BrandColors.black,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  fillShadowGradient: BrandColors.purple,
+                  fillShadowGradientOpacity: 0.8,
+                  style: {
+                    borderRadius: 6,
+                  },
+                  propsForBackgroundLines: {
+                    strokeDasharray: '3 3',
+                    stroke: BrandColors.white,
+                    strokeOpacity: 0.5,
+                  },
+                  propsForLabels: {
+                    fontSize: 10,
+                  },
+                }}
+                fromZero
+                showValuesOnTopOfBars={false}
+                withInnerLines={false}
+                withHorizontalLabels={true}
+                withVerticalLabels={false}
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 6,
+                }}
+                yAxisLabel=""
+                yAxisSuffix=""
+              />
             </View>
             <Text style={styles.performanceLabel}>Metrics</Text>
           </View>
@@ -211,7 +280,7 @@ export default function CoachDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -267,27 +336,19 @@ function AthleteRow({ athlete }: AthleteRowProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BrandColors.black,
-  },
-  statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    ...(Platform.OS === 'ios' && { paddingTop: 8 }),
+    backgroundColor: SemanticColors.background,
   },
   navBar: {
-    backgroundColor: BrandColors.black,
+    backgroundColor: SemanticColors.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.md,
   },
   backButtonNav: {
     width: 24,
@@ -297,211 +358,210 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     flex: 1,
-    color: BrandColors.white,
-    fontSize: 20,
-    fontWeight: '500',
+    color: SemanticColors.textPrimary,
+    fontSize: 32,
+    fontWeight: Typography.fontWeight.semibold as any,
   },
   navIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
+  },
+  iconButton: {
+    padding: Spacing.xs,
   },
   iconEmoji: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.lg,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: Spacing['4xl'],
   },
   teamAnalyticsSection: {
-    paddingHorizontal: 12,
-    paddingTop: 24,
-    paddingBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: Spacing.lg,
   },
   analyticsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.md,
   },
   analyticsCard: {
     flex: 1,
     borderWidth: 1,
-    borderColor: BrandColors.white,
-    borderRadius: 6,
-    padding: 12,
+    borderColor: SemanticColors.borderPrimary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    minHeight: 100,
   },
   analyticsLabel: {
-    fontSize: 14,
-    color: BrandColors.white,
-    marginBottom: 4,
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textSecondary,
+    marginBottom: Spacing.sm,
+    fontWeight: Typography.fontWeight.medium as any,
   },
   analyticsValue: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: BrandColors.white,
+    fontSize: 28,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: Spacing.xs,
   },
   analyticsChange: {
-    fontSize: 14,
-    color: BrandColors.white,
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.success,
+    fontWeight: Typography.fontWeight.medium as any,
   },
   distributionSection: {
-    paddingHorizontal: 12,
-    marginBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing['3xl'],
   },
   distributionCard: {
     borderWidth: 1,
-    borderColor: BrandColors.white,
-    borderRadius: 6,
-    padding: 12,
+    borderColor: SemanticColors.borderPrimary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
   },
   distributionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 4,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: 6,
   },
   distributionSubtitle: {
-    fontSize: 12,
-    color: BrandColors.white,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textSecondary,
+    marginBottom: Spacing.lg,
   },
   pieChartContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: Spacing.xl,
+    overflow: 'hidden',
   },
   distributionLabel: {
-    fontSize: 12,
-    color: BrandColors.white,
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: Spacing.sm,
   },
   performanceSection: {
-    paddingHorizontal: 12,
-    marginBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing['3xl'],
   },
   performanceCard: {
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 6,
-    padding: 12,
+    borderColor: SemanticColors.borderPrimary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
   },
   performanceTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 4,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: 6,
   },
   performanceSubtitle: {
-    fontSize: 12,
-    color: BrandColors.white,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textSecondary,
+    marginBottom: Spacing.lg,
   },
   barChartContainer: {
     borderWidth: 1,
-    borderColor: BrandColors.white,
-    height: 160,
+    borderColor: SemanticColors.borderSecondary,
+    borderRadius: BorderRadius.md,
+    height: 180,
     position: 'relative',
-    marginBottom: 4,
-  },
-  barChartBars: {
-    position: 'absolute',
-    left: 16,
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-    height: 131,
-    width: '100%',
-    paddingRight: 16,
-  },
-  bar: {
-    width: 28,
-    backgroundColor: BrandColors.white,
+    marginBottom: Spacing.sm,
+    overflow: 'hidden',
   },
   performanceLabel: {
-    fontSize: 12,
-    color: BrandColors.white,
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: Spacing.sm,
   },
   searchSection: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   searchTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: Spacing.md,
   },
   searchInputContainer: {
     borderWidth: 1,
-    borderColor: BrandColors.white,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: SemanticColors.borderPrimary,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: 6,
   },
   searchInput: {
-    color: BrandColors.white,
-    fontSize: 14,
+    color: SemanticColors.textPrimary,
+    fontSize: 15,
     backgroundColor: 'transparent',
   },
   searchHint: {
-    fontSize: 12,
-    color: BrandColors.white,
-    marginTop: 4,
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textTertiary,
+    marginTop: Spacing.xs,
   },
   filterSection: {
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   filterTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: Spacing.md,
   },
   filterButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flexWrap: 'wrap',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   filterButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(190, 174, 174, 0.30)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderMuted,
   },
   filterButtonSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.30)',
+    backgroundColor: SemanticColors.primary,
   },
   filterButtonText: {
-    fontSize: 14,
-    color: BrandColors.white,
+    fontSize: Typography.fontSize.md,
+    color: SemanticColors.textPrimary,
+    fontWeight: Typography.fontWeight.medium as any,
   },
   filterHint: {
-    fontSize: 12,
-    color: BrandColors.white,
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textTertiary,
   },
   rosterSection: {
-    paddingHorizontal: 12,
-    paddingTop: 16,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
   },
   rosterTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+    marginBottom: Spacing.xl,
   },
   rosterList: {
     gap: 0,
@@ -509,43 +569,47 @@ const styles = StyleSheet.create({
   athleteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    gap: Spacing.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    borderBottomColor: SemanticColors.borderMuted,
   },
   athleteAvatar: {
-    width: 27,
-    height: 27,
-    borderRadius: 13.5,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   athleteInfo: {
     flex: 1,
+    gap: Spacing.xs,
   },
   athleteName: {
-    fontSize: 14,
-    color: BrandColors.white,
+    fontSize: 15,
+    color: SemanticColors.textPrimary,
+    fontWeight: Typography.fontWeight.medium as any,
+    marginBottom: 2,
   },
   athleteStatus: {
-    fontSize: 12,
-    color: '#CACACA',
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textSecondary,
   },
   viewAnalyticsButton: {
-    backgroundColor: '#D9D9D9',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: SemanticColors.primary,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   viewAnalyticsText: {
-    color: BrandColors.black,
-    fontSize: 12,
-    fontWeight: '600',
+    color: SemanticColors.textOnPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold as any,
   },
   arrowIcon: {
     width: 32,
-      height: 19,
-    },
-  });
+    height: 19,
+  },
+});
