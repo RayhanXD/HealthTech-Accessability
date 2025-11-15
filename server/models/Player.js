@@ -191,6 +191,15 @@ const playerSchema = new mongoose.Schema({
     required: true,
     enum: ['Male', 'Female', 'Other']
   },
+  sahhaProfileId: {
+    type: String,
+    default: null,
+    index: true
+  },
+  sahhaProfileToken: {
+    type: String,
+    default: null
+  },
   Insights: {
     type: insightsSchema,
     default: {
@@ -203,7 +212,7 @@ const playerSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-playerSchema.index({ Username: 1 });
+// Note: Username index is automatically created by unique: true
 playerSchema.index({ fName: 1, Lname: 1 });
 
 // Pre-save middleware to hash password

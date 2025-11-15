@@ -10,7 +10,6 @@ const {
   removePlayerFromTrainer,
   getTrainerPlayers
 } = require('../controllers/trainerController');
-const { trainerValidation } = require('../middleware/validation');
 
 // @route   GET /api/trainers
 // @desc    Get all trainers with optional filtering and pagination
@@ -26,12 +25,12 @@ router.get('/:id', getTrainerById);
 // @route   POST /api/trainers
 // @desc    Create new trainer
 // @access  Public
-router.post('/', trainerValidation.create, createTrainer);
+router.post('/', createTrainer);
 
 // @route   PUT /api/trainers/:id
 // @desc    Update trainer
 // @access  Public
-router.put('/:id', trainerValidation.update, updateTrainer);
+router.put('/:id', updateTrainer);
 
 // @route   DELETE /api/trainers/:id
 // @desc    Delete trainer

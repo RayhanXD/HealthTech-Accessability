@@ -10,7 +10,6 @@ const {
   addTrendToPlayer,
   addComparisonToPlayer
 } = require('../controllers/playerController');
-const { playerValidation, trendValidation, comparisonValidation } = require('../middleware/validation');
 
 // @route   GET /api/players
 // @desc    Get all players with optional filtering and pagination
@@ -26,12 +25,12 @@ router.get('/:id', getPlayerById);
 // @route   POST /api/players
 // @desc    Create new player
 // @access  Public
-router.post('/', playerValidation.create, createPlayer);
+router.post('/', createPlayer);
 
 // @route   PUT /api/players/:id
 // @desc    Update player
 // @access  Public
-router.put('/:id', playerValidation.update, updatePlayer);
+router.put('/:id', updatePlayer);
 
 // @route   DELETE /api/players/:id
 // @desc    Delete player
@@ -46,11 +45,11 @@ router.put('/:id/insights', updatePlayerInsights);
 // @route   POST /api/players/:id/trends
 // @desc    Add trend to player
 // @access  Public
-router.post('/:id/trends', trendValidation, addTrendToPlayer);
+router.post('/:id/trends', addTrendToPlayer);
 
 // @route   POST /api/players/:id/comparisons
 // @desc    Add comparison to player
 // @access  Public
-router.post('/:id/comparisons', comparisonValidation, addComparisonToPlayer);
+router.post('/:id/comparisons', addComparisonToPlayer);
 
 module.exports = router;

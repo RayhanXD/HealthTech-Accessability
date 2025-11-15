@@ -27,6 +27,21 @@ export const Colors = {
   },
 };
 
+// Brand colors
+export const BrandColors = {
+  purple: '#8B5CF6', // brand-purple
+  purpleDark: '#7C3AED', // brand-purple-dark
+  green: '#78E66C', // brand-green
+  white: '#FFFFFF',
+  black: '#000000',
+  offWhite: '#FFFCFC',
+  lightGray: '#F8F8FF',
+  darkGray: '#212121',
+  lightBeige: '#F4EAEA',
+  progressGray: '#D9D9D9',
+  cardGray: '#DBDBDB',
+};
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

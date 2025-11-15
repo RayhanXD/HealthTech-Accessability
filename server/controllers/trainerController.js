@@ -1,6 +1,5 @@
 const Trainer = require('../models/Trainer');
 const Player = require('../models/Player');
-const { validationResult } = require('express-validator');
 
 // @desc    Get all trainers
 // @route   GET /api/trainers
@@ -91,16 +90,6 @@ const getTrainerById = async (req, res) => {
 // @access  Public
 const createTrainer = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
     const { User, Password, fName, lname, Players } = req.body;
 
     // Check if trainer already exists
@@ -162,16 +151,6 @@ const createTrainer = async (req, res) => {
 // @access  Public
 const updateTrainer = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
     const { User, Password, fName, lname, Players } = req.body;
 
     // Check if username is being changed and if it already exists

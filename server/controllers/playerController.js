@@ -1,5 +1,4 @@
 const Player = require('../models/Player');
-const { validationResult } = require('express-validator');
 
 // @desc    Get all players
 // @route   GET /api/players
@@ -96,16 +95,6 @@ const getPlayerById = async (req, res) => {
 // @access  Public
 const createPlayer = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
     const {
       Username,
       Password,
@@ -167,16 +156,6 @@ const createPlayer = async (req, res) => {
 // @access  Public
 const updatePlayer = async (req, res) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
     const {
       Username,
       Password,
