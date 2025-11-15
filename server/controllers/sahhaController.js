@@ -224,7 +224,7 @@ const getHealthScores = async (req, res) => {
       `${dataBaseURL}/api/v1/profiles/${sahhaProfileId}/scores`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
         }
       }
     );

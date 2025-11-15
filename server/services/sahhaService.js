@@ -21,63 +21,139 @@ class SahhaService {
       return this.accountToken;
     }
 
-    try {
-      // Authentication endpoint is on app.sahha.ai, not sandbox-api.sahha.ai
-      const authEndpoint = `${this.authBaseURL}/api/v1/oauth/account/token`;
-      
-      console.log(`Authenticating with: ${authEndpoint}`);
-      
-      // Use camelCase: clientId and clientSecret (as shown in OpenAPI spec)
-      // X-Environment header is required per the API documentation
-      const response = await axios.post(
-        authEndpoint,
-        {
+    // Try multiple authentication strategies based on OpenAPI spec
+    const authStrategies = [
+      // Strategy 1: Standard approach with X-Environment header (per OpenAPI spec)
+      {
+        endpoint: `${this.authBaseURL}/api/v1/oauth/account/token`,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Environment': this.environment
+        },
+        description: 'Standard with X-Environment header'
+      },
+      // Strategy 2: Try with capitalized environment
+      {
+        endpoint: `${this.authBaseURL}/api/v1/oauth/account/token`,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Environment': this.environment.charAt(0).toUpperCase() + this.environment.slice(1)
+        },
+        description: 'With capitalized X-Environment header'
+      },
+      // Strategy 3: Try without X-Environment (though spec says it's required)
+      {
+        endpoint: `${this.authBaseURL}/api/v1/oauth/account/token`,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        description: 'Without X-Environment header'
+      },
+      // Strategy 4: Try production environment (in case credentials are production)
+      {
+        endpoint: `${this.authBaseURL}/api/v1/oauth/account/token`,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Environment': 'production'
+        },
+        description: 'Trying production environment'
+      }
+    ];
+
+    for (let i = 0; i < authStrategies.length; i++) {
+      const strategy = authStrategies[i];
+      try {
+        console.log(`\n🔄 Attempting authentication (Strategy ${i + 1}): ${strategy.description}`);
+        console.log(`   Endpoint: ${strategy.endpoint}`);
+        console.log(`   Headers:`, JSON.stringify(strategy.headers, null, 2));
+        console.log(`   Request Body:`, JSON.stringify({
+          clientId: this.clientId ? `${this.clientId.substring(0, 10)}...` : 'Missing',
+          clientSecret: this.clientSecret ? '***hidden***' : 'Missing'
+        }, null, 2));
+        
+        const requestBody = {
           clientId: this.clientId,
           clientSecret: this.clientSecret
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': '*/*',
-            'X-Environment': this.environment
+        };
+
+        const response = await axios.post(
+          strategy.endpoint,
+          requestBody,
+          {
+            headers: strategy.headers,
+            validateStatus: function (status) {
+              return status < 500; // Don't throw for 4xx errors, only 5xx
+            }
+          }
+        );
+
+        // Check if we got a successful response
+        if (response.status === 200 && response.data) {
+          // Response uses accountToken per OpenAPI spec (RetrieveClientTokenCommandResult)
+          this.accountToken = response.data.accountToken;
+          
+          if (!this.accountToken) {
+            console.error(`❌ Strategy ${i + 1} failed: No accountToken in response`);
+            console.error('Response data:', JSON.stringify(response.data, null, 2));
+            continue; // Try next strategy
+          }
+          
+          // Set expiry (typically tokens expire in 1 hour, subtracting 5 minutes for safety)
+          // If no expiry info provided, default to 55 minutes
+          const expiresIn = response.data.expires_in || response.data.expiresIn || 3300;
+          this.tokenExpiry = Date.now() + (expiresIn * 1000);
+          
+          console.log('✅ Authentication successful!');
+          console.log(`   Token type: ${response.data.tokenType || 'unknown'}`);
+          console.log(`   Token (first 20 chars): ${this.accountToken.substring(0, 20)}...`);
+          return this.accountToken;
+        } else {
+          // Got a response but it's not 200
+          console.error(`❌ Strategy ${i + 1} failed: Status ${response.status}`);
+          console.error('Response data:', JSON.stringify(response.data, null, 2));
+          
+          // If it's a 400, the credentials or headers are wrong - try next strategy
+          // If it's still 500, might be a server issue
+          if (response.status === 500 && i < authStrategies.length - 1) {
+            continue; // Try next strategy
+          } else if (response.status === 400) {
+            continue; // Try next strategy
+          } else {
+            throw new Error(`Authentication failed with status ${response.status}: ${JSON.stringify(response.data)}`);
           }
         }
-      );
-
-      // Response uses accountToken per OpenAPI spec
-      this.accountToken = response.data.accountToken;
-      
-      if (!this.accountToken) {
-        throw new Error('No accountToken received in response');
+      } catch (error) {
+        const status = error.response?.status;
+        const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+        
+        console.error(`❌ Strategy ${i + 1} failed: ${status || 'No status'} - ${errorMsg}`);
+        
+        // If this is the last strategy, throw the error
+        if (i === authStrategies.length - 1) {
+          console.error('\n❌ All authentication strategies failed');
+          console.error('Auth Base URL:', this.authBaseURL);
+          console.error('Data Base URL:', this.dataBaseURL);
+          console.error('Environment:', this.environment);
+          console.error('Client ID:', this.clientId ? `${this.clientId.substring(0, 10)}...` : 'Missing');
+          console.error('Client Secret:', this.clientSecret ? 'Set (hidden)' : 'Missing');
+          
+          if (error.response) {
+            console.error('Final Status Code:', error.response.status);
+            console.error('Final Response Data:', JSON.stringify(error.response.data, null, 2));
+            console.error('Final Response Headers:', JSON.stringify(error.response.headers, null, 2));
+          } else if (error.request) {
+            console.error('No response received. Request config:', {
+              url: error.config?.url,
+              method: error.config?.method,
+              headers: error.config?.headers
+            });
+          }
+          
+          const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message;
+          throw new Error(`Failed to authenticate with Sahha API: ${errorMessage} (Status: ${error.response?.status || 'No response'})`);
+        }
+        // Otherwise, continue to next strategy
       }
-      
-      // Set expiry (typically tokens expire in 1 hour, subtracting 5 minutes for safety)
-      // If no expiry info provided, default to 55 minutes
-      const expiresIn = response.data.expires_in || response.data.expiresIn || 3300;
-      this.tokenExpiry = Date.now() + (expiresIn * 1000);
-      
-      console.log('✅ Authentication successful!');
-      return this.accountToken;
-    } catch (error) {
-      console.error('❌ Error getting Sahha account token:');
-      console.error('Auth Base URL:', this.authBaseURL);
-      console.error('Endpoint:', `${this.authBaseURL}/api/v1/oauth/account/token`);
-      console.error('Environment:', this.environment);
-      console.error('Client ID:', this.clientId ? `${this.clientId.substring(0, 10)}...` : 'Missing');
-      console.error('Client Secret:', this.clientSecret ? 'Set (hidden)' : 'Missing');
-      console.error('Error message:', error.message);
-      
-      if (error.response) {
-        console.error('Status Code:', error.response.status);
-        console.error('Status Text:', error.response.statusText);
-        console.error('Response Data:', JSON.stringify(error.response.data, null, 2));
-        console.error('Response Headers:', error.response.headers);
-      } else if (error.request) {
-        console.error('No response received. Request:', error.request);
-      }
-      
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message;
-      throw new Error(`Failed to authenticate with Sahha API: ${errorMessage} (Status: ${error.response?.status || 'No response'})`);
     }
   }
 
@@ -103,7 +179,7 @@ class SahhaService {
         profileData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `account ${token}`, // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
             'Content-Type': 'application/json'
           }
         }
@@ -132,7 +208,7 @@ class SahhaService {
         `${this.dataBaseURL}/api/v1/profiles/${profileId}/trends?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
           }
         }
       );
@@ -160,7 +236,7 @@ class SahhaService {
         `${this.dataBaseURL}/api/v1/profiles/${profileId}/comparisons?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
           }
         }
       );

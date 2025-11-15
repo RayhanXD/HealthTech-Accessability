@@ -82,7 +82,7 @@ async function testSahhaIntegration() {
         `${dataBaseURL}/api/v1/profiles/${testPlayer.sahhaProfileId}/scores`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
           }
         }
       );
