@@ -7,6 +7,9 @@ class SahhaService {
     this.authBaseURL = process.env.SAHHA_AUTH_BASE_URL || 'https://app.sahha.ai';
     this.clientId = process.env.SAHHA_CLIENT_ID;
     this.clientSecret = process.env.SAHHA_CLIENT_SECRET;
+    // Application credentials for user token creation (correct method per Sahha docs)
+    this.appId = process.env.SAHHA_APPLICATION_ID;
+    this.appSecret = process.env.SAHHA_APPLICATION_SECRET;
     this.environment = process.env.SAHHA_ENVIRONMENT || 'sandbox';
     this.accountToken = null;
     this.tokenExpiry = null;
@@ -322,6 +325,79 @@ class SahhaService {
       State: comparison.state || comparison.State || '',
       Properties: comparison.properties || comparison.Properties || {}
     }));
+  }
+
+  /**
+   * Create a user token for SDK authentication
+   * Uses Application ID/Secret (correct method per Sahha documentation)
+   * @param {string} externalUserId - The external user ID (playerId)
+   * @returns {Promise<string>} User token for SDK
+   */
+  async createUserToken(externalUserId) {
+    if (!this.appId || !this.appSecret) {
+      throw new Error('SAHHA_APPLICATION_ID and SAHHA_APPLICATION_SECRET must be set in .env');
+    }
+
+    // Try different endpoint variations
+    const endpoints = [
+      `${this.dataBaseURL}/api/v1/user/token`,  // With /api prefix
+      `${this.dataBaseURL}/v1/user/token`,     // Without /api prefix
+      `https://api.sahha.ai/v1/user/token`,    // Direct API URL
+      `https://api.sahha.ai/api/v1/user/token` // Direct API URL with prefix
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}`);
+        const response = await axios.post(
+          endpoint,
+          { external_id: externalUserId },
+          {
+            headers: {
+              'x-app-id': this.appId,
+              'x-app-secret': this.appSecret,
+              'Content-Type': 'application/json'
+            },
+            validateStatus: () => true // Don't throw on 404
+          }
+        );
+
+        if (response.status === 200 && response.data?.token) {
+          return response.data.token;
+        } else if (response.status !== 404) {
+          // If it's not 404, this might be the right endpoint but wrong format
+          console.log(`Endpoint ${endpoint} returned ${response.status}:`, response.data);
+        }
+      } catch (error) {
+        if (error.response?.status !== 404) {
+          console.log(`Endpoint ${endpoint} error:`, error.message);
+        }
+      }
+    }
+
+    // If all endpoints failed, try the last one and throw the error
+    try {
+      const response = await axios.post(
+        `${this.dataBaseURL}/api/v1/user/token`,
+        { external_id: externalUserId },
+        {
+          headers: {
+            'x-app-id': this.appId,
+            'x-app-secret': this.appSecret,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.data || !response.data.token) {
+        throw new Error('No token received from Sahha API');
+      }
+
+      return response.data.token;
+    } catch (error) {
+      console.error('Error creating Sahha user token:', error.response?.data || error.message);
+      throw new Error(`Failed to create user token: ${error.response?.data?.message || error.message}`);
+    }
   }
 
   /**

@@ -30,85 +30,94 @@ router.post('/webhook', handleWebhook);
 router.get('/scores/:sahhaProfileId', getHealthScores);
 
 // @route   GET /api/sahha/token/:playerId
-// @desc    Get Sahha profile token for SDK authentication
+// @route   POST /api/sahha/token
+// @desc    Get Sahha user token for SDK authentication
 // @access  Public (should be protected with user auth in production)
+// @body    { userId } (for POST method)
 router.get('/token/:playerId', async (req, res) => {
   try {
     const { playerId } = req.params;
-    
-    const Player = require('../models/Player');
-    const player = await Player.findById(playerId);
-    
+    await handleTokenRequest(playerId, res);
+  } catch (error) {
+    console.error('Error getting user token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get user token',
+      error: error.message
+    });
+  }
+});
+
+router.post('/token', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId is required in request body'
+      });
+    }
+    await handleTokenRequest(userId, res);
+  } catch (error) {
+    console.error('Error getting user token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get user token',
+      error: error.message
+    });
+  }
+});
+
+async function handleTokenRequest(userId, res) {
+  const Player = require('../models/Player');
+  const sahhaService = require('../services/sahhaService');
+  
+  // Verify player exists (optional - you can remove this if not needed)
+  try {
+    const player = await Player.findById(userId);
     if (!player) {
       return res.status(404).json({
         success: false,
         message: 'Player not found'
       });
     }
+  } catch (error) {
+    // If userId is not a valid MongoDB ID, continue anyway (might be external ID)
+  }
 
-    // If player doesn't have a Sahha profile, return error with action
-    if (!player.sahhaProfileId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Player does not have a Sahha profile. Initialize it first using POST /api/sahha/sync',
-        action: 'initialize_profile'
-      });
-    }
-
-    // If we have a stored profile token, return it
-    if (player.sahhaProfileToken) {
+  // Check if we have a cached token
+  try {
+    const player = await Player.findById(userId);
+    if (player && player.sahhaProfileToken) {
       return res.json({
         success: true,
-        token: player.sahhaProfileToken,
-        sahhaProfileId: player.sahhaProfileId
+        token: player.sahhaProfileToken
       });
     }
-
-    // Otherwise, retrieve profile token from Sahha API using OpenAPI spec endpoint
-    const sahhaService = require('../services/sahhaService');
-    const accountToken = await sahhaService.getAccountToken();
-    
-    const axios = require('axios');
-    const dataBaseURL = process.env.SAHHA_API_BASE_URL || 'https://sandbox-api.sahha.ai';
-    
-    const response = await axios.post(
-      `${dataBaseURL}/api/v1/oauth/profile/token`,
-      {
-        externalId: playerId,
-        readOnly: false
-      },
-      {
-        headers: {
-          'Authorization': `account ${accountToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const profileToken = response.data.profileToken;
-    
-    if (!profileToken) {
-      throw new Error('No profileToken received from Sahha API');
-    }
-    
-    // Save token to player
-    player.sahhaProfileToken = profileToken;
-    await player.save();
-
-    res.json({
-      success: true,
-      token: profileToken,
-      sahhaProfileId: player.sahhaProfileId
-    });
   } catch (error) {
-    console.error('Error getting profile token:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get profile token',
-      error: error.message
-    });
+    // Continue to create new token
   }
-});
+
+  // Create user token using Application credentials (correct method)
+  const token = await sahhaService.createUserToken(userId);
+  
+  // Save token to player if player exists
+  try {
+    const player = await Player.findById(userId);
+    if (player) {
+      player.sahhaProfileToken = token;
+      await player.save();
+    }
+  } catch (error) {
+    // If player doesn't exist or save fails, still return token
+    console.warn('Could not save token to player:', error.message);
+  }
+
+  res.json({
+    success: true,
+    token: token
+  });
+}
 
 // @route   POST /api/sahha/test
 // @desc    Test endpoint for manual testing of Sahha integration

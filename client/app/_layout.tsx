@@ -95,6 +95,7 @@ export default function RootLayout() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="dashboard" />
         <Stack.Screen name="coach-dashboard" />
+        <Stack.Screen name="test-sahha" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen 
           name="modal" 
