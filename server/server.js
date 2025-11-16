@@ -3,33 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const mongoose = require('mongoose');
 require('dotenv').config();
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB connected successfully');
-    console.log(`📊 Database: ${mongoose.connection.name}`);
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
-
-// Handle connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('⚠️ MongoDB disconnected');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB error:', err);
-});
 
 // Import routes
 const sahhaRoutes = require('./routes/sahhaRoutes');
-const playerRoutes = require('./routes/playerRoutes');
-const trainerRoutes = require('./routes/trainerRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,8 +42,6 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/sahha', sahhaRoutes);
-app.use('/api/players', playerRoutes);
-app.use('/api/trainers', trainerRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -76,9 +51,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
-      sahha: '/api/sahha',
-      players: '/api/players',
-      trainers: '/api/trainers'
+      sahha: '/api/sahha'
     },
     documentation: {
       sahha: {
@@ -102,17 +75,7 @@ app.use('*', (req, res) => {
       'POST /api/sahha/sync',
       'POST /api/sahha/sync/:sahhaProfileId',
       'POST /api/sahha/webhook',
-      'GET /api/sahha/scores/:sahhaProfileId',
-      'GET /api/players',
-      'GET /api/players/:id',
-      'POST /api/players',
-      'PUT /api/players/:id',
-      'DELETE /api/players/:id',
-      'GET /api/trainers',
-      'GET /api/trainers/:id',
-      'POST /api/trainers',
-      'PUT /api/trainers/:id',
-      'DELETE /api/trainers/:id'
+      'GET /api/sahha/scores/:sahhaProfileId'
     ]
   });
 });
