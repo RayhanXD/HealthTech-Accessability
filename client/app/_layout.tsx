@@ -3,11 +3,17 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Easing } from 'react-native';
+import { useFonts } from 'expo-font';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { configureSahha } from '@/lib/sahha/sahhaConfig';
+
+// Keep the splash screen visible while we load fonts
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   // Removed anchor to allow root index.tsx to be the first screen
@@ -67,6 +73,13 @@ const smoothTransition = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [fontsLoaded, fontError] = useFonts({
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+    'Inter-ExtraBold': Inter_800ExtraBold,
+  });
 
   // Configure Sahha SDK immediately upon app launch
   useEffect(() => {
@@ -74,6 +87,16 @@ export default function RootLayout() {
       console.error('Failed to configure Sahha SDK at app launch:', error);
     });
   }, []);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

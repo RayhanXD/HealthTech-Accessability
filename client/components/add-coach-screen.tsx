@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,19 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
 import AnimatedProgressBar from './animated-progress-bar';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface AddCoachScreenProps {
   onContinue?: (email: string) => void;
@@ -25,11 +33,41 @@ export default function AddCoachScreen({
   continueHref = '/congratulations',
 }: AddCoachScreenProps) {
   const [coachEmail, setCoachEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const router = useRouter();
+
+  // Animation values
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(20);
+  const formOpacity = useSharedValue(0);
+  const formTranslateY = useSharedValue(20);
+
+  useEffect(() => {
+    titleOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+    titleTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+
+    setTimeout(() => {
+      formOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+      formTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
+    }, 200);
+  }, []);
 
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const validateEmail = (emailValue: string) => {
+    if (emailValue.length === 0) {
+      setEmailError('');
+      return false;
+    }
+    if (!isValidEmail(emailValue)) {
+      setEmailError('Invalid email');
+      return false;
+    }
+    setEmailError('');
+    return true;
   };
 
   const isFormValid = () => {
@@ -41,7 +79,12 @@ export default function AddCoachScreen({
   };
 
   const handleContinue = () => {
-    if (!isFormValid()) return;
+    // Validate email before proceeding
+    const emailValid = validateEmail(coachEmail);
+    
+    if (!emailValid || !isFormValid()) {
+      return;
+    }
     
     if (onContinue) {
       onContinue(coachEmail);
@@ -87,75 +130,73 @@ export default function AddCoachScreen({
         </View>
       </View>
 
-      {/* Title and Description */}
-      <View style={styles.titleSection}>
-        <Text style={styles.title}>Add Coach</Text>
-        <Text style={styles.description}>
-          Enter coach email provided by your coach:
-        </Text>
-      </View>
-
-      {/* Email Input */}
+      {/* Main Content */}
       <View style={styles.mainContent}>
-        <View style={styles.emailFieldContainer}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputRow}>
-              <Image
-                source={{
-                  uri: 'https://api.builder.io/api/v1/image/assets/TEMP/0805bfd236c0d50fab5cc8d2663b7738f8dd8883?width=32',
-                }}
-                style={styles.inputIcon}
-                contentFit="contain"
-              />
-              <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                <Path
-                  d="M0.5 8.5L0.5 0.5"
-                  stroke="white"
-                  strokeLinecap="round"
-                />
-              </Svg>
+        <Animated.View style={[styles.titleSection, useAnimatedStyle(() => ({
+          opacity: titleOpacity.value,
+          transform: [{ translateY: titleTranslateY.value }],
+        }))]}>
+          <Text style={styles.title}>Add Coach</Text>
+        </Animated.View>
+
+        <Animated.View 
+          style={[styles.formContainer, useAnimatedStyle(() => ({
+            opacity: formOpacity.value,
+            transform: [{ translateY: formTranslateY.value }],
+          }))]}
+          pointerEvents="box-none">
+          <Text style={styles.description}>
+            Enter coach email provided by your coach:
+          </Text>
+
+          {/* Email Input */}
+          <View style={styles.emailFieldContainer}>
+            <Text style={styles.label}>Email</Text>
+            <View style={[styles.inputContainer, emailError && styles.inputContainerError]}>
               <TextInput
                 style={styles.input}
                 value={coachEmail}
-                onChangeText={setCoachEmail}
+                onChangeText={(text) => {
+                  setCoachEmail(text);
+                  if (text.length > 0) {
+                    validateEmail(text);
+                  } else {
+                    setEmailError('');
+                  }
+                }}
+                onBlur={() => validateEmail(coachEmail)}
                 placeholder="example@email.com"
-                placeholderTextColor={BrandColors.white}
+                placeholderTextColor={SemanticColors.textTertiary}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                returnKeyType="done"
+                editable={true}
               />
             </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke={BrandColors.purple}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
           </View>
-        </View>
-      </View>
 
-      {/* Continue Button */}
-      <View style={styles.continueSection}>
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !isFormValid() && styles.continueButtonDisabled,
-          ]}
-          onPress={handleContinue}
-          activeOpacity={0.9}
-          disabled={!isFormValid()}>
-          <Text
-            style={[
-              styles.continueButtonText,
-              !isFormValid() && styles.continueButtonTextDisabled,
-            ]}>
-            Continue
-          </Text>
-        </TouchableOpacity>
+          {/* Continue Button */}
+          <View style={styles.continueButtonContainer}>
+            <AnimatedTouchableOpacity
+              style={[
+                styles.continueButton,
+                !isFormValid() && styles.continueButtonDisabled,
+              ]}
+              onPress={handleContinue}
+              activeOpacity={0.9}
+              disabled={!isFormValid()}>
+              <Text
+                style={[
+                  styles.continueButtonText,
+                  !isFormValid() && styles.continueButtonTextDisabled,
+                ]}>
+                Continue
+              </Text>
+            </AnimatedTouchableOpacity>
+          </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -169,7 +210,7 @@ const styles = StyleSheet.create({
   progressSection: {
     paddingHorizontal: 18,
     marginTop: 0,
-    marginBottom: 12,
+    marginBottom: Spacing['3xl'],
   },
   progressRow: {
     flexDirection: 'row',
@@ -177,114 +218,119 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
-    backgroundColor: BrandColors.black,
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   progressBarContainer: {
     flex: 1,
-    height: 6,
+    height: 4,
     position: 'relative',
     borderRadius: 999,
     overflow: 'hidden',
   },
-  titleSection: {
-    paddingHorizontal: 32,
-    marginBottom: 32,
-    maxWidth: 672,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 30,
-    lineHeight: 33,
-    fontWeight: '500',
-    color: BrandColors.white,
-    marginBottom: 24,
-  },
-  description: {
-    fontSize: 15,
-    lineHeight: 16.5,
-    fontWeight: '500',
-    color: BrandColors.white,
-    textAlign: 'center',
-    maxWidth: 328,
-    alignSelf: 'center',
-    marginBottom: 48,
-  },
   mainContent: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing['4xl'],
+    paddingTop: Spacing['4xl'],
     maxWidth: 672,
     width: '100%',
     alignSelf: 'center',
+    justifyContent: 'flex-start',
+  },
+  titleSection: {
+    marginBottom: Spacing['4xl'],
+  },
+  title: {
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
+    color: BrandColors.white,
+    letterSpacing: -0.3,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+    fontFamily: Typography.fontFamily.sans,
+    color: SemanticColors.textSecondary,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    marginBottom: Spacing['2xl'],
   },
   emailFieldContainer: {
-    marginBottom: 32,
-    maxWidth: 343,
-    alignSelf: 'center',
+    marginBottom: Spacing['6xl'],
     width: '100%',
   },
-  label: {
-    color: BrandColors.white,
-    fontSize: 16,
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
-    marginBottom: 12,
+    marginTop: Spacing.xs,
     letterSpacing: 0.2,
-    lineHeight: 22.4,
   },
-  inputWrapper: {
-    gap: 8,
+  label: {
+    color: SemanticColors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: Typography.fontFamily.medium,
+    marginBottom: Spacing.md,
+    letterSpacing: 0.2,
   },
-  inputRow: {
+  inputContainer: {
+    ...ComponentTokens.input,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  inputIcon: {
-    width: 16,
-    height: 16,
+  inputContainerError: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
   },
   input: {
     flex: 1,
     backgroundColor: 'transparent',
     color: BrandColors.white,
-    fontSize: 14,
+    fontSize: 16,
+    fontFamily: Typography.fontFamily.sans,
+    padding: 0,
+    minHeight: 20,
   },
-  continueSection: {
-    paddingHorizontal: 32,
-    paddingBottom: 32,
-    paddingTop: 48,
-    maxWidth: 672,
+  continueButtonContainer: {
     width: '100%',
-    alignSelf: 'center',
+    marginTop: Spacing['2xl'],
   },
   continueButton: {
     width: '100%',
-    maxWidth: 293,
-    height: 43,
-    borderRadius: 15,
+    height: 56,
+    borderRadius: BorderRadius['2xl'],
     backgroundColor: BrandColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
+    ...FuturisticDesign.glow,
   },
   continueButtonDisabled: {
-    backgroundColor: '#4B5563',
-    opacity: 0.5,
+    backgroundColor: SemanticColors.surfaceSecondary,
+    opacity: 0.4,
   },
   continueButtonText: {
-    color: BrandColors.lightGray,
+    color: BrandColors.white,
     fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
     fontSize: 18,
-    letterSpacing: 0.2,
-    lineHeight: 25.2,
+    letterSpacing: 0.3,
   },
   continueButtonTextDisabled: {
-    color: '#9CA3AF',
+    color: SemanticColors.textTertiary,
   },
 });

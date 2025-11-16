@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,20 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Svg, { Path, Ellipse, Circle } from 'react-native-svg';
-import { BrandColors } from '@/constants/theme';
+import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import AnimatedProgressBar from './animated-progress-bar';
+
 
 interface CongratulationsScreenProps {
   userName?: string;
@@ -27,16 +36,48 @@ export default function CongratulationsScreen({
 }: CongratulationsScreenProps) {
   const router = useRouter();
 
+  // Animation values
+  const headingOpacity = useSharedValue(0);
+  const headingTranslateY = useSharedValue(20);
+  const iconScale = useSharedValue(0.8);
+  const iconOpacity = useSharedValue(0);
+  const messageOpacity = useSharedValue(0);
+  const messageTranslateY = useSharedValue(20);
+
+  useEffect(() => {
+    // Staggered entrance animations
+    headingOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+    headingTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+
+    setTimeout(() => {
+      iconScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+      iconOpacity.value = withTiming(1, { duration: 500 });
+    }, 200);
+
+    setTimeout(() => {
+      messageOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+      messageTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
+    }, 400);
+  }, []);
+
+  // Auto-advance after animations complete (synchronized with other screens)
+  useEffect(() => {
+    // All animations complete around 600ms, then add delay to match other screens (200ms pattern)
+    const autoAdvanceTimer = setTimeout(() => {
+      if (onContinue) {
+        onContinue();
+      } else {
+        router.push('/sign-in' as any);
+      }
+    }, 1700); // 600ms for animations + 900ms to show the celebration
+
+    return () => {
+      clearTimeout(autoAdvanceTimer);
+    };
+  }, [onContinue, router]);
+
   const handleBack = () => {
     router.back();
-  };
-
-  const handleContinue = () => {
-    if (onContinue) {
-      onContinue();
-    } else {
-      router.push('/sign-in' as any);
-    }
   };
 
   const { height: screenHeight } = Dimensions.get('window');
@@ -76,61 +117,63 @@ export default function CongratulationsScreen({
         </View>
       </View>
 
-      {/* Congratulations Heading */}
-      <View style={styles.headingSection}>
-        <Text style={styles.heading}>
-          Congratulations {userName}!
-        </Text>
-      </View>
+      {/* Main Content - Centered */}
+      <View style={styles.mainContent}>
+        {/* Congratulations Heading */}
+        <Animated.View style={[styles.headingSection, useAnimatedStyle(() => ({
+          opacity: headingOpacity.value,
+          transform: [{ translateY: headingTranslateY.value }],
+        }))]}>
+          <Text style={styles.heading}>
+            Congratulations {userName}!
+          </Text>
+        </Animated.View>
 
-      {/* Success Icon */}
-      <View style={styles.iconSection}>
-        <View style={styles.iconContainer}>
-          {/* Outer white circle */}
-          <Svg
-            width={209}
-            height={210}
-            viewBox="0 0 209 210"
-            fill="none"
-            style={styles.outerCircle}>
-            <Ellipse cx="104.5" cy="105" rx="104.5" ry="105" fill="white" />
-          </Svg>
-
-          {/* Inner black circle */}
-          <View style={styles.innerCircleContainer}>
-            <Svg width={190} height={190} viewBox="0 0 190 190" fill="none">
-              <Circle cx="95" cy="95" r="95" fill="black" />
+        {/* Success Icon */}
+        <Animated.View style={[styles.iconSection, useAnimatedStyle(() => ({
+          opacity: iconOpacity.value,
+          transform: [{ scale: iconScale.value }],
+        }))]}>
+          <View style={styles.iconContainer}>
+            {/* Outer white circle */}
+            <Svg
+              width={209}
+              height={210}
+              viewBox="0 0 209 210"
+              fill="none"
+              style={styles.outerCircle}>
+              <Ellipse cx="104.5" cy="105" rx="104.5" ry="105" fill="white" />
             </Svg>
+
+            {/* Inner black circle */}
+            <View style={styles.innerCircleContainer}>
+              <Svg width={190} height={190} viewBox="0 0 190 190" fill="none">
+                <Circle cx="95" cy="95" r="95" fill="black" />
+              </Svg>
+            </View>
+
+            {/* Checkmark image */}
+            <View style={styles.checkmarkContainer}>
+              <Image
+                source={{
+                  uri: 'https://api.builder.io/api/v1/image/assets/TEMP/c64d7dd959a49c2bad1d3644ed20a5f77e84eaf2?width=370',
+                }}
+                style={styles.checkmarkImage}
+                contentFit="contain"
+              />
+            </View>
           </View>
+        </Animated.View>
 
-          {/* Checkmark image */}
-          <View style={styles.checkmarkContainer}>
-            <Image
-              source={{
-                uri: 'https://api.builder.io/api/v1/image/assets/TEMP/c64d7dd959a49c2bad1d3644ed20a5f77e84eaf2?width=370',
-              }}
-              style={styles.checkmarkImage}
-              contentFit="contain"
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Completion Message */}
-      <View style={styles.messageSection}>
-        <Text style={styles.message}>
-          You have finished setting up your account!
-        </Text>
-      </View>
-
-      {/* Continue Button */}
-      <View style={styles.continueSection}>
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-          activeOpacity={0.9}>
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+        {/* Completion Message */}
+        <Animated.View style={[styles.messageSection, useAnimatedStyle(() => ({
+          opacity: messageOpacity.value,
+          transform: [{ translateY: messageTranslateY.value }],
+        }))]}>
+          <Text style={styles.message}>
+            You have finished setting up your account!
+          </Text>
+        </Animated.View>
       </View>
     </View>
   );
@@ -142,9 +185,9 @@ const styles = StyleSheet.create({
     backgroundColor: BrandColors.black,
   },
   progressSection: {
-    paddingHorizontal: 17,
+    paddingHorizontal: 18,
     marginTop: 0,
-    marginBottom: 48,
+    marginBottom: Spacing['3xl'],
   },
   progressRow: {
     flexDirection: 'row',
@@ -152,43 +195,48 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
-    backgroundColor: BrandColors.black,
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   progressBarContainer: {
     flex: 1,
-    height: 6,
+    height: 4,
     position: 'relative',
-    borderRadius: 3,
+    borderRadius: 999,
     overflow: 'hidden',
   },
-  headingSection: {
-    paddingHorizontal: 32,
-    marginBottom: 32,
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: Spacing['4xl'],
+    paddingTop: Spacing['6xl'],
     maxWidth: 672,
+    width: '100%',
+    alignSelf: 'center',
+    justifyContent: 'flex-start',
+  },
+  headingSection: {
+    marginBottom: Spacing['2xl'],
     width: '100%',
     alignSelf: 'center',
   },
   heading: {
-    fontSize: 38,
-    lineHeight: 41.8,
-    fontWeight: '500',
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
     color: BrandColors.white,
     textAlign: 'center',
-    maxWidth: 356,
-    alignSelf: 'center',
+    letterSpacing: -0.3,
   },
   iconSection: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    marginBottom: 32,
+    marginBottom: Spacing['2xl'],
   },
   iconContainer: {
     width: 209,
@@ -227,43 +275,17 @@ const styles = StyleSheet.create({
     height: 185,
   },
   messageSection: {
-    paddingHorizontal: 32,
-    marginBottom: 48,
-    maxWidth: 672,
+    marginBottom: Spacing['4xl'],
     width: '100%',
     alignSelf: 'center',
   },
   message: {
-    fontSize: 19,
-    lineHeight: 20.9,
-    fontWeight: '500',
-    color: BrandColors.white,
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+    fontFamily: Typography.fontFamily.sans,
+    color: SemanticColors.textSecondary,
     textAlign: 'center',
-    maxWidth: 355,
-    alignSelf: 'center',
-  },
-  continueSection: {
-    paddingHorizontal: 32,
-    paddingBottom: 32,
-    maxWidth: 672,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  continueButton: {
-    width: '100%',
-    maxWidth: 293,
-    height: 43,
-    borderRadius: 15,
-    backgroundColor: BrandColors.purple,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  continueButtonText: {
-    color: BrandColors.lightGray,
-    fontWeight: '600',
-    fontSize: 18,
     letterSpacing: 0.2,
-      lineHeight: 25.2,
-    },
+  },
   });

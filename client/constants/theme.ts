@@ -77,10 +77,14 @@ export const Spacing = {
 // Typography Tokens
 export const Typography = {
   fontFamily: {
-    sans: Platform.select({
-      ios: 'system-ui',
-      default: 'normal',
-      web: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    sans: 'Inter-Regular',
+    medium: 'Inter-Medium',
+    semibold: 'Inter-SemiBold',
+    bold: 'Inter-Bold',
+    extrabold: 'Inter-ExtraBold',
+    // Fallback for web
+    ...(Platform.OS === 'web' && {
+      sans: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     }),
   },
   fontSize: {
@@ -114,6 +118,8 @@ export const BorderRadius = {
   md: 8,
   lg: 10,
   xl: 12,
+  '2xl': 16,
+  '3xl': 20,
   full: 9999,
 };
 
@@ -139,6 +145,65 @@ export const Shadows = {
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
+  },
+};
+
+// Futuristic Design Tokens
+export const FuturisticDesign = {
+  // Glassmorphism effects
+  glass: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backdropFilter: 'blur(10px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  glassDark: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backdropFilter: 'blur(10px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  // Glow effects
+  glow: {
+    shadowColor: BrandColors.purple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  glowSubtle: {
+    shadowColor: BrandColors.purple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  glowGreen: {
+    shadowColor: BrandColors.green,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  // Futuristic borders
+  borderGlow: {
+    borderWidth: 1,
+    borderColor: BrandColors.purple,
+    shadowColor: BrandColors.purple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  // Elevated surfaces with depth
+  surfaceElevated: {
+    backgroundColor: SemanticColors.surfaceElevated,
+    ...Shadows.md,
+  },
+  surfaceFloating: {
+    backgroundColor: 'rgba(42, 42, 42, 0.8)',
+    ...Shadows.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 158, 246, 0.1)',
   },
 };
 
@@ -176,27 +241,41 @@ export const Animations = {
 
 // Component-Specific Tokens
 export const ComponentTokens = {
-  // Card styles
+  // Card styles - minimalistic and futuristic
   card: {
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius['2xl'],
     padding: Spacing.xl,
     borderWidth: 1,
-    borderColor: SemanticColors.borderPrimary,
-    backgroundColor: SemanticColors.surface,
+    borderColor: SemanticColors.borderMuted,
+    backgroundColor: SemanticColors.surfaceElevated,
+    ...FuturisticDesign.glowSubtle,
   },
-  // Button styles
+  cardGlass: {
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing.xl,
+    ...FuturisticDesign.glassDark,
+  },
+  // Button styles - modern and clean
   button: {
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing.lg,
   },
-  // Input styles
+  buttonPrimary: {
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing['2xl'],
+    paddingVertical: Spacing.lg,
+    backgroundColor: BrandColors.purple,
+    ...FuturisticDesign.glow,
+  },
+  // Input styles - minimalistic
   input: {
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
     borderWidth: 1,
-    borderColor: SemanticColors.borderPrimary,
+    borderColor: SemanticColors.borderMuted,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   // Navbar styles
   navbar: {

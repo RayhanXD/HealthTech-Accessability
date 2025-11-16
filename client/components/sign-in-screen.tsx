@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,19 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { BrandColors, SemanticColors} from '@/constants/theme';
+import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface SignInScreenProps {
   onLogin?: (email: string, password: string) => void;
@@ -31,6 +41,22 @@ export default function SignInScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const router = useRouter();
+
+  // Animation values
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(20);
+  const formOpacity = useSharedValue(0);
+  const formTranslateY = useSharedValue(20);
+
+  useEffect(() => {
+    titleOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+    titleTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+
+    setTimeout(() => {
+      formOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+      formTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
+    }, 200);
+  }, []);
 
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -63,7 +89,7 @@ export default function SignInScreen({
   };
 
   const handleBack = () => {
-    router.back();
+    router.push('/' as any);
   };
 
   const handleForgotPassword = () => {
@@ -109,110 +135,54 @@ export default function SignInScreen({
 
       {/* Main Content */}
       <View style={styles.mainContent}>
-        <View style={styles.titleSection}>
+        <Animated.View style={[styles.titleSection, useAnimatedStyle(() => ({
+          opacity: titleOpacity.value,
+          transform: [{ translateY: titleTranslateY.value }],
+        }))]}>
           <Text style={styles.title}>Sign in</Text>
-          <Svg width={74} height={3} viewBox="0 0 77 3" fill="none">
-            <Path
-              d="M1.5 1.5H75.5"
-              stroke={BrandColors.purple}
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </Svg>
-        </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.formContainer, useAnimatedStyle(() => ({
+          opacity: formOpacity.value,
+          transform: [{ translateY: formTranslateY.value }],
+        }))]}>
 
         {/* Email Field */}
         <View style={styles.fieldContainer}>
           <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputRow}>
-              <Image
-                source={{
-                  uri: 'https://api.builder.io/api/v1/image/assets/TEMP/0805bfd236c0d50fab5cc8d2663b7738f8dd8883?width=32',
-                }}
-                style={styles.inputIcon}
-                contentFit="contain"
-              />
-              <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                <Path
-                  d="M0.5 8.5L0.5 0.5"
-                  stroke="white"
-                  strokeLinecap="round"
-                />
-              </Svg>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="example@email.com"
-                placeholderTextColor={SemanticColors.textTertiary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke={BrandColors.purple}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="example@email.com"
+              placeholderTextColor={SemanticColors.textTertiary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
           </View>
         </View>
 
         {/* Password Field */}
         <View style={styles.passwordFieldContainer}>
           <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.passwordInputRow}>
-              <View style={styles.inputRow}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/3a4e4b50aeba2df667be1d3998be13220e159ebd?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-                <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                  <Path
-                    d="M0.5 8.5L0.5 0.5"
-                    stroke="white"
-                    strokeLinecap="round"
-                  />
-                </Svg>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="enter your password"
-                  placeholderTextColor={SemanticColors.textTertiary}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/7c836a3c9c4fc8a304ae4a87211607a3c9d5ef59?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-              </TouchableOpacity>
-            </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke={BrandColors.purple}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="enter your password"
+              placeholderTextColor={SemanticColors.textTertiary}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}>
+              <Text style={styles.eyeButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -237,7 +207,7 @@ export default function SignInScreen({
 
         {/* Login Button */}
         <View style={styles.loginButtonContainer}>
-          <TouchableOpacity
+          <AnimatedTouchableOpacity
             style={[
               styles.loginButton,
               !isFormValid() && styles.loginButtonDisabled,
@@ -250,20 +220,21 @@ export default function SignInScreen({
                 styles.loginButtonText,
                 !isFormValid() && styles.loginButtonTextDisabled,
               ]}>
-              Login
+              Sign in
             </Text>
-          </TouchableOpacity>
+          </AnimatedTouchableOpacity>
         </View>
 
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an Account ?</Text>
-          <Link href="/" asChild>
+          <Text style={styles.signUpText}>Don't have an Account? </Text>
+          <Link href="/create-account" asChild>
             <TouchableOpacity activeOpacity={0.7}>
               <Text style={styles.signUpLink}>Sign up</Text>
             </TouchableOpacity>
           </Link>
         </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -275,9 +246,9 @@ const styles = StyleSheet.create({
     backgroundColor: SemanticColors.background,
   },
   progressSection: {
-    paddingHorizontal: 17,
+    paddingHorizontal: 18,
     marginTop: 0,
-    marginBottom: 48,
+    marginBottom: Spacing['3xl'],
   },
   progressRow: {
     flexDirection: 'row',
@@ -285,10 +256,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
-    backgroundColor: BrandColors.black,
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -320,137 +291,134 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing['4xl'],
+    paddingTop: Spacing['4xl'],
     maxWidth: 672,
     width: '100%',
     alignSelf: 'center',
+    justifyContent: 'flex-start',
   },
   titleSection: {
-    marginBottom: 40,
+    marginBottom: Spacing['4xl'],
   },
   title: {
-    fontSize: 38,
-    lineHeight: 41.8,
-    fontWeight: '500',
-    color: SemanticColors.textPrimary,
-    marginBottom: 8,
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
+    color: BrandColors.white,
+    letterSpacing: -0.3,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   fieldContainer: {
-    marginBottom: 32,
-    maxWidth: 343,
-    alignSelf: 'center',
+    marginBottom: Spacing['2xl'],
     width: '100%',
   },
   passwordFieldContainer: {
-    marginBottom: 16,
-    maxWidth: 343,
-    alignSelf: 'center',
+    marginBottom: Spacing.lg,
     width: '100%',
   },
   label: {
-    color: SemanticColors.textPrimary,
-    fontSize: 16,
+    color: SemanticColors.textSecondary,
+    fontSize: 14,
     fontWeight: '500',
-    marginBottom: 12,
+    fontFamily: Typography.fontFamily.medium,
+    marginBottom: Spacing.md,
     letterSpacing: 0.2,
-    lineHeight: 22.4,
   },
-  inputWrapper: {
-    gap: 8,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  passwordInputRow: {
+  inputContainer: {
+    ...ComponentTokens.input,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  inputIcon: {
-    width: 16,
-    height: 16,
-  },
   input: {
     flex: 1,
     backgroundColor: 'transparent',
-    color: SemanticColors.textPrimary,
-    fontSize: 14,
+    color: BrandColors.white,
+    fontSize: 16,
+    fontFamily: Typography.fontFamily.sans,
+    padding: 0,
   },
   eyeButton: {
-    marginLeft: 8,
+    paddingLeft: Spacing.md,
+  },
+  eyeButtonText: {
+    color: BrandColors.purple,
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.medium,
+    fontWeight: '500',
   },
   optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 48,
-    maxWidth: 343,
-    alignSelf: 'center',
+    marginBottom: Spacing['6xl'],
     width: '100%',
   },
   rememberMeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: Spacing.sm,
   },
   checkbox: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: SemanticColors.primaryDark,
-    backgroundColor: SemanticColors.primary,
+    width: 18,
+    height: 18,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1.5,
+    borderColor: SemanticColors.borderMuted,
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxInner: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: 2,
-    borderWidth: 1,
-    borderColor: SemanticColors.primaryDark,
-    backgroundColor: SemanticColors.primary,
+    backgroundColor: BrandColors.purple,
   },
   rememberMeText: {
-    color: SemanticColors.textPrimary,
-    fontSize: 12,
+    color: SemanticColors.textSecondary,
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
     letterSpacing: 0.2,
   },
   forgotPasswordText: {
-    color: SemanticColors.primary,
-    fontSize: 12,
+    color: BrandColors.purple,
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.semibold,
     fontWeight: '600',
     letterSpacing: 0.2,
+    textDecorationLine: 'underline',
   },
   loginButtonContainer: {
-    maxWidth: 343,
-    alignSelf: 'center',
     width: '100%',
-    marginBottom: 24,
+    marginBottom: Spacing['2xl'],
   },
   loginButton: {
     width: '100%',
-    height: 49,
-    borderRadius: 12,
-    backgroundColor: SemanticColors.primary,
+    height: 56,
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: BrandColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    ...FuturisticDesign.glow,
   },
   loginButtonDisabled: {
     backgroundColor: SemanticColors.surfaceSecondary,
-    opacity: 0.5,
+    opacity: 0.4,
   },
   loginButtonText: {
-    color: SemanticColors.textOnPrimary,
+    color: BrandColors.white,
     fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
     fontSize: 18,
-    letterSpacing: 0.2,
-    lineHeight: 25.2,
+    letterSpacing: 0.3,
   },
   loginButtonTextDisabled: {
     color: SemanticColors.textTertiary,
@@ -459,22 +427,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    maxWidth: 343,
-    alignSelf: 'center',
+    gap: Spacing.xs,
     width: '100%',
   },
   signUpText: {
-    color: SemanticColors.textPrimary,
+    color: SemanticColors.textSecondary,
     fontSize: 14,
+    fontFamily: Typography.fontFamily.sans,
     letterSpacing: 0.2,
-    lineHeight: 19.6,
   },
   signUpLink: {
-    color: SemanticColors.primary,
+    color: BrandColors.white,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: Typography.fontFamily.semibold,
+    fontWeight: '600',
     letterSpacing: 0.2,
-    lineHeight: 19.6,
+    textDecorationLine: 'underline',
   },
   });

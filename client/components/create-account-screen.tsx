@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,19 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
-import { BrandColors, SemanticColors } from '@/constants/theme';
+import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
 import AnimatedProgressBar from './animated-progress-bar';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface CreateAccountScreenProps {
   onCreateAccount?: (email: string, password: string) => void;
@@ -29,7 +37,26 @@ export default function CreateAccountScreen({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const router = useRouter();
+
+  // Animation values
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(20);
+  const formOpacity = useSharedValue(0);
+  const formTranslateY = useSharedValue(20);
+
+  useEffect(() => {
+    titleOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+    titleTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+
+    setTimeout(() => {
+      formOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
+      formTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
+    }, 200);
+  }, []);
 
   const getPasswordStrength = (pwd: string) => {
     if (pwd.length === 0) return 0;
@@ -43,6 +70,46 @@ export default function CreateAccountScreen({
   const isValidEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const validateEmail = (emailValue: string) => {
+    if (emailValue.length === 0) {
+      setEmailError('');
+      return false;
+    }
+    if (!isValidEmail(emailValue)) {
+      setEmailError('Invalid email');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
+
+  const validatePassword = (passwordValue: string) => {
+    if (passwordValue.length === 0) {
+      setPasswordError('');
+      return false;
+    }
+    const strength = getPasswordStrength(passwordValue);
+    if (strength < 3) {
+      setPasswordError('Password not strong enough');
+      return false;
+    }
+    setPasswordError('');
+    return true;
+  };
+
+  const validateConfirmPassword = (confirmPasswordValue: string) => {
+    if (confirmPasswordValue.length === 0) {
+      setConfirmPasswordError('');
+      return false;
+    }
+    if (password !== confirmPasswordValue) {
+      setConfirmPasswordError('Passwords don\'t match');
+      return false;
+    }
+    setConfirmPasswordError('');
+    return true;
   };
 
   const isFormValid = () => {
@@ -60,6 +127,15 @@ export default function CreateAccountScreen({
   };
 
   const handleCreateAccount = () => {
+    // Validate all fields
+    const emailValid = validateEmail(email);
+    const passwordValid = validatePassword(password);
+    const confirmPasswordValid = validateConfirmPassword(confirmPassword);
+
+    if (!emailValid || !passwordValid || !confirmPasswordValid) {
+      return;
+    }
+
     if (!isFormValid()) return;
     
     if (onCreateAccount) {
@@ -108,115 +184,81 @@ export default function CreateAccountScreen({
 
       {/* Main Content */}
       <View style={styles.mainContent}>
-        <View style={styles.titleSection}>
+        <Animated.View style={[styles.titleSection, useAnimatedStyle(() => ({
+          opacity: titleOpacity.value,
+          transform: [{ translateY: titleTranslateY.value }],
+        }))]}>
           <Text style={styles.title}>Create an account</Text>
-          <Svg width={74} height={3} viewBox="0 0 77 3" fill="none">
-            <Path
-              d="M1.5 1.5H75.5"
-              stroke={BrandColors.purple}
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </Svg>
-        </View>
+        </Animated.View>
+
+        <Animated.View style={[styles.formContainer, useAnimatedStyle(() => ({
+          opacity: formOpacity.value,
+          transform: [{ translateY: formTranslateY.value }],
+        }))]}>
 
         {/* Email Field */}
-        <View style={[styles.fieldContainer, { marginBottom: 32 }]}>
+        <View style={styles.fieldContainer}>
           <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputRow}>
-              <Image
-                source={{
-                  uri: 'https://api.builder.io/api/v1/image/assets/TEMP/0805bfd236c0d50fab5cc8d2663b7738f8dd8883?width=32',
-                }}
-                style={styles.inputIcon}
-                contentFit="contain"
-              />
-              <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                <Path
-                  d="M0.5 8.5L0.5 0.5"
-                  stroke="white"
-                  strokeLinecap="round"
-                />
-              </Svg>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="example@email.com"
-                placeholderTextColor={SemanticColors.textTertiary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke={BrandColors.purple}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+          <View style={[styles.inputContainer, emailError && styles.inputContainerError]}>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (text.length > 0) {
+                  validateEmail(text);
+                } else {
+                  setEmailError('');
+                }
+              }}
+              onBlur={() => validateEmail(email)}
+              placeholder="example@email.com"
+              placeholderTextColor={SemanticColors.textTertiary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
           </View>
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
         </View>
 
         {/* Password Field */}
-        <View style={[styles.fieldContainer, { marginBottom: 12 }]}>
+        <View style={styles.fieldContainer}>
           <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.passwordInputRow}>
-              <View style={styles.inputRow}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/3a4e4b50aeba2df667be1d3998be13220e159ebd?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-                <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                  <Path
-                    d="M0.5 8.5L0.5 0.5"
-                    stroke="white"
-                    strokeLinecap="round"
-                  />
-                </Svg>
-                <TextInput
-                  style={styles.input}
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="enter your password"
-                  placeholderTextColor={SemanticColors.textTertiary}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/7c836a3c9c4fc8a304ae4a87211607a3c9d5ef59?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-              </TouchableOpacity>
-            </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke="#BDBDBD"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+          <View style={[styles.inputContainer, passwordError && styles.inputContainerError]}>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (text.length > 0) {
+                  validatePassword(text);
+                } else {
+                  setPasswordError('');
+                }
+                // Re-validate confirm password when password changes
+                if (confirmPassword.length > 0) {
+                  validateConfirmPassword(confirmPassword);
+                }
+              }}
+              onBlur={() => validatePassword(password)}
+              placeholder="enter your password"
+              placeholderTextColor={SemanticColors.textTertiary}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}>
+              <Text style={styles.eyeButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
           </View>
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
         </View>
 
         {/* Password Strength Indicator */}
-        <View style={[styles.passwordStrengthContainer, { marginBottom: 32 }]}>
+        <View style={styles.passwordStrengthContainer}>
           <View style={styles.strengthBars}>
             <View
               style={[
@@ -246,76 +288,56 @@ export default function CreateAccountScreen({
         </View>
 
         {/* Confirm Password Field */}
-        <View style={[styles.fieldContainer, { marginBottom: 48 }]}>
+        <View style={styles.fieldContainer}>
           <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.passwordInputRow}>
-              <View style={styles.inputRow}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/3a4e4b50aeba2df667be1d3998be13220e159ebd?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-                <Svg width={1} height={9} viewBox="0 0 1 9" fill="none">
-                  <Path
-                    d="M0.5 8.5L0.5 0.5"
-                    stroke="white"
-                    strokeLinecap="round"
-                  />
-                </Svg>
-                <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="enter your password"
-                  placeholderTextColor={SemanticColors.textTertiary}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeButton}>
-                <Image
-                  source={{
-                    uri: 'https://api.builder.io/api/v1/image/assets/TEMP/7c836a3c9c4fc8a304ae4a87211607a3c9d5ef59?width=32',
-                  }}
-                  style={styles.inputIcon}
-                  contentFit="contain"
-                />
-              </TouchableOpacity>
-            </View>
-            <Svg width="100%" height={2} viewBox="0 0 345 2" fill="none">
-              <Path
-                d="M0.75 0.75H343.75"
-                stroke="#BDBDBD"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </Svg>
+          <View style={[styles.inputContainer, confirmPasswordError && styles.inputContainerError]}>
+            <TextInput
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (text.length > 0) {
+                  validateConfirmPassword(text);
+                } else {
+                  setConfirmPasswordError('');
+                }
+              }}
+              onBlur={() => validateConfirmPassword(confirmPassword)}
+              placeholder="confirm your password"
+              placeholderTextColor={SemanticColors.textTertiary}
+              secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={styles.eyeButton}>
+              <Text style={styles.eyeButtonText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
           </View>
+          {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
         </View>
 
         {/* Create Account Button */}
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            !isFormValid() && styles.createButtonDisabled,
-          ]}
-          onPress={handleCreateAccount}
-          activeOpacity={0.9}
-          disabled={!isFormValid()}>
-          <Text
+        <View style={styles.createButtonContainer}>
+          <AnimatedTouchableOpacity
             style={[
-              styles.createButtonText,
-              !isFormValid() && styles.createButtonTextDisabled,
-            ]}>
-            Create Account
-          </Text>
-        </TouchableOpacity>
+              styles.createButton,
+              !isFormValid() && styles.createButtonDisabled,
+            ]}
+            onPress={handleCreateAccount}
+            activeOpacity={0.9}
+            disabled={!isFormValid()}>
+            <Text
+              style={[
+                styles.createButtonText,
+                !isFormValid() && styles.createButtonTextDisabled,
+              ]}>
+              Create Account
+            </Text>
+          </AnimatedTouchableOpacity>
+        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -327,9 +349,9 @@ const styles = StyleSheet.create({
     backgroundColor: SemanticColors.background,
   },
   progressSection: {
-    paddingHorizontal: 17,
+    paddingHorizontal: 18,
     marginTop: 0,
-    marginBottom: 48,
+    marginBottom: Spacing['3xl'],
   },
   progressRow: {
     flexDirection: 'row',
@@ -337,10 +359,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
-    backgroundColor: BrandColors.black,
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -354,118 +376,129 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing['4xl'],
+    paddingTop: Spacing['4xl'],
     maxWidth: 672,
     width: '100%',
     alignSelf: 'center',
+    justifyContent: 'flex-start',
   },
   titleSection: {
-    marginBottom: 40,
+    marginBottom: Spacing['4xl'],
   },
   title: {
-    fontSize: 38,
-    lineHeight: 41.8,
-    fontWeight: '500',
-    color: SemanticColors.textPrimary,
-    marginBottom: 8,
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
+    color: BrandColors.white,
+    letterSpacing: -0.3,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   fieldContainer: {
-    marginBottom: 32,
+    marginBottom: Spacing['2xl'],
+    width: '100%',
   },
-  fieldContainerSmall: {
-    marginBottom: 12,
-  },
-  fieldContainerLarge: {
-    marginBottom: 48,
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontFamily: Typography.fontFamily.medium,
+    fontWeight: '500',
+    marginTop: Spacing.xs,
+    letterSpacing: 0.2,
   },
   label: {
-    color: SemanticColors.textPrimary,
-    fontSize: 16,
+    color: SemanticColors.textSecondary,
+    fontSize: 14,
     fontWeight: '500',
-    marginBottom: 12,
+    fontFamily: Typography.fontFamily.medium,
+    marginBottom: Spacing.md,
     letterSpacing: 0.2,
-    lineHeight: 22.4,
   },
-  inputWrapper: {
-    gap: 8,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  passwordInputRow: {
+  inputContainer: {
+    ...ComponentTokens.input,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  inputIcon: {
-    width: 16,
-    height: 16,
+  inputContainerError: {
+    borderColor: '#EF4444',
+    borderWidth: 1,
   },
   input: {
     flex: 1,
     backgroundColor: 'transparent',
-    color: SemanticColors.textPrimary,
-    fontSize: 14,
+    color: BrandColors.white,
+    fontSize: 16,
+    fontFamily: Typography.fontFamily.sans,
+    padding: 0,
   },
   eyeButton: {
-    marginLeft: 8,
+    paddingLeft: Spacing.md,
+  },
+  eyeButtonText: {
+    color: BrandColors.purple,
+    fontSize: 14,
+    fontFamily: Typography.fontFamily.medium,
+    fontWeight: '500',
   },
   passwordStrengthContainer: {
-    marginBottom: 32,
+    marginBottom: Spacing['2xl'],
+    width: '100%',
   },
   strengthBars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   strengthBar: {
-    height: 3,
-    borderRadius: 5,
-    backgroundColor: '#374151',
+    flex: 1,
+    height: 4,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  strengthBar1: {
-    width: 105,
-  },
-  strengthBar2: {
-    width: 105,
-  },
-  strengthBar3: {
-    width: 111,
-  },
+  strengthBar1: {},
+  strengthBar2: {},
+  strengthBar3: {},
   strengthBarActive: {
-    backgroundColor: SemanticColors.success,
+    backgroundColor: BrandColors.green,
   },
   strongPasswordText: {
-    color: SemanticColors.success,
+    color: BrandColors.green,
     fontSize: 12,
+    fontFamily: Typography.fontFamily.medium,
     fontWeight: '500',
     letterSpacing: 0.2,
   },
+  createButtonContainer: {
+    width: '100%',
+    marginTop: Spacing['2xl'],
+    marginBottom: Spacing['2xl'],
+  },
   createButton: {
     width: '100%',
-    maxWidth: 343,
-    height: 49,
-    borderRadius: 12,
-    backgroundColor: SemanticColors.primary,
+    height: 56,
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: BrandColors.purple,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    ...FuturisticDesign.glow,
   },
   createButtonDisabled: {
     backgroundColor: SemanticColors.surfaceSecondary,
-    opacity: 0.5,
+    opacity: 0.4,
   },
   createButtonText: {
-    color: SemanticColors.textOnPrimary,
+    color: BrandColors.white,
     fontWeight: '600',
+    fontFamily: Typography.fontFamily.semibold,
     fontSize: 18,
-    letterSpacing: 0.2,
-    lineHeight: 25.2,
+    letterSpacing: 0.3,
   },
   createButtonTextDisabled: {
     color: SemanticColors.textTertiary,
