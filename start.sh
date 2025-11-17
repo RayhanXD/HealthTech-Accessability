@@ -74,3 +74,4 @@ echo "Or manually kill processes: kill $SERVER_PID $CLIENT_PID"
 echo "$SERVER_PID $CLIENT_PID" > .pids
 
 
+

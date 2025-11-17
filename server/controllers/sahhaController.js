@@ -56,7 +56,24 @@ const initializeSahhaProfile = async (req, res) => {
       });
     }
 
-    const profileId = sahhaProfile.id || sahhaProfile.profile_id;
+    // Extract profile ID from JWT token (profileToken contains the profileId in its claims)
+    let profileId = sahhaProfile.id || sahhaProfile.profile_id;
+    
+    // If no profile ID in response, decode it from the profileToken JWT
+    if (!profileId && sahhaProfile.profileToken) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.decode(sahhaProfile.profileToken);
+        profileId = decoded?.['https://api.sahha.ai/claims/profileId'] || decoded?.profileId;
+      } catch (error) {
+        console.warn('Could not decode profileToken to get profileId:', error.message);
+      }
+    }
+    
+    // If still no profile ID, use externalId (playerId) as identifier
+    if (!profileId) {
+      profileId = playerId;
+    }
 
     // Fetch initial insights (may be empty on first sync)
     let insights;
@@ -73,7 +90,7 @@ const initializeSahhaProfile = async (req, res) => {
 
     // Save Sahha profile ID and token to player
     player.sahhaProfileId = profileId;
-    player.sahhaProfileToken = sahhaProfile.token || sahhaProfile.profile_token;
+    player.sahhaProfileToken = sahhaProfile.profileToken || sahhaProfile.token || sahhaProfile.profile_token;
     player.Insights = insights;
     await player.save();
 
@@ -82,7 +99,7 @@ const initializeSahhaProfile = async (req, res) => {
       message: 'Sahha profile initialized successfully',
       data: {
         sahhaProfileId: profileId,
-        sahhaProfileToken: sahhaProfile.token || sahhaProfile.profile_token,
+        sahhaProfileToken: sahhaProfile.profileToken || sahhaProfile.token || sahhaProfile.profile_token,
         Insights: insights
       }
     });
