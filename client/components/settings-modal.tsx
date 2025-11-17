@@ -120,7 +120,8 @@ export default function SettingsModal({ visible, onClose }: SettingsModalProps) 
     // Handle different settings options
     switch (option) {
       case 'profile':
-        Alert.alert('Profile', 'Profile settings coming soon!');
+        handleClose();
+        router.push('/profile');
         break;
       case 'notifications':
         Alert.alert('Notifications', 'Notification preferences coming soon!');
@@ -135,10 +136,12 @@ export default function SettingsModal({ visible, onClose }: SettingsModalProps) 
         Alert.alert('Help & Support', 'Help center coming soon!');
         break;
       case 'about':
-        Alert.alert('About', 'Concussion Recovery Tracker\nVersion 1.0.0');
+        handleClose();
+        router.push('/about');
         break;
       case 'terms':
-        Alert.alert('Terms and Conditions', 'Terms and conditions coming soon!');
+        handleClose();
+        router.push('/terms-and-conditions');
         break;
       default:
         break;
