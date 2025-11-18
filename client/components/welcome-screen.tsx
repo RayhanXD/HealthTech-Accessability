@@ -42,22 +42,41 @@ export default function WelcomeScreen({
   const signUpButtonScale = useSharedValue(1);
 
   useEffect(() => {
-    // Simple fade-in animations
-    titleOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.ease) });
+    // Optimized fade-in animations for 120Hz displays
+    // Using bezier easing for smoother high-frame-rate animations
+    titleOpacity.value = withTiming(1, { 
+      duration: 400, 
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) // Optimized for 120Hz
+    });
     
     setTimeout(() => {
-      buttonOpacity.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.ease) });
-    }, 200);
+      buttonOpacity.value = withTiming(1, { 
+        duration: 350, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+    }, 150);
 
     setTimeout(() => {
-      signInOpacity.value = withTiming(1, { duration: 400 });
-    }, 300);
+      signInOpacity.value = withTiming(1, { 
+        duration: 350,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      });
+    }, 250);
   }, []);
 
   const handleSignUp = () => {
+    // Optimized spring animations for 120Hz - higher damping and stiffness for smoother feel
     signUpButtonScale.value = withSequence(
-      withSpring(0.95, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 10, stiffness: 300 })
+      withSpring(0.96, { 
+        damping: 15, // Increased for smoother 120Hz
+        stiffness: 400, // Increased for snappier response
+        mass: 0.5 // Lower mass for faster response
+      }),
+      withSpring(1, { 
+        damping: 15, 
+        stiffness: 400,
+        mass: 0.5
+      })
     );
     
     setTimeout(() => {

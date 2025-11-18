@@ -45,19 +45,40 @@ export default function CongratulationsScreen({
   const messageTranslateY = useSharedValue(20);
 
   useEffect(() => {
-    // Staggered entrance animations
-    headingOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
-    headingTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+    // Optimized staggered entrance animations for 120Hz displays
+    headingOpacity.value = withTiming(1, { 
+      duration: 450, 
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+    });
+    headingTranslateY.value = withSpring(0, { 
+      damping: 18, 
+      stiffness: 150,
+      mass: 0.5
+    });
 
     setTimeout(() => {
-      iconScale.value = withSpring(1, { damping: 12, stiffness: 100 });
-      iconOpacity.value = withTiming(1, { duration: 500 });
-    }, 200);
+      iconScale.value = withSpring(1, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+      iconOpacity.value = withTiming(1, { 
+        duration: 400,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      });
+    }, 150);
 
     setTimeout(() => {
-      messageOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
-      messageTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
-    }, 400);
+      messageOpacity.value = withTiming(1, { 
+        duration: 400, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+      messageTranslateY.value = withSpring(0, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+    }, 300);
   }, []);
 
   // Auto-advance after animations complete (synchronized with other screens)

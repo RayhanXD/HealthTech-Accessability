@@ -43,13 +43,28 @@ export default function AddCoachScreen({
   const formTranslateY = useSharedValue(20);
 
   useEffect(() => {
-    titleOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
-    titleTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+    // Optimized for 120Hz displays
+    titleOpacity.value = withTiming(1, { 
+      duration: 450, 
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+    });
+    titleTranslateY.value = withSpring(0, { 
+      damping: 18, 
+      stiffness: 150,
+      mass: 0.5
+    });
 
     setTimeout(() => {
-      formOpacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
-      formTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
-    }, 200);
+      formOpacity.value = withTiming(1, { 
+        duration: 400, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+      formTranslateY.value = withSpring(0, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+    }, 150);
   }, []);
 
   const isValidEmail = (email: string) => {

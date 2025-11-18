@@ -47,24 +47,52 @@ export default function GenderSelectionScreen({
   const button3TranslateY = useSharedValue(20);
 
   useEffect(() => {
-    // Staggered entrance animations
-    titleOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
-    titleTranslateY.value = withSpring(0, { damping: 15, stiffness: 100 });
+    // Optimized staggered entrance animations for 120Hz displays
+    titleOpacity.value = withTiming(1, { 
+      duration: 450, 
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+    });
+    titleTranslateY.value = withSpring(0, { 
+      damping: 18, 
+      stiffness: 150,
+      mass: 0.5
+    });
 
     setTimeout(() => {
-      button1Opacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
-      button1TranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
-    }, 100);
+      button1Opacity.value = withTiming(1, { 
+        duration: 400, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+      button1TranslateY.value = withSpring(0, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+    }, 80);
 
     setTimeout(() => {
-      button2Opacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
-      button2TranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
-    }, 200);
+      button2Opacity.value = withTiming(1, { 
+        duration: 400, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+      button2TranslateY.value = withSpring(0, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+    }, 150);
 
     setTimeout(() => {
-      button3Opacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.cubic) });
-      button3TranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
-    }, 300);
+      button3Opacity.value = withTiming(1, { 
+        duration: 400, 
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1) 
+      });
+      button3TranslateY.value = withSpring(0, { 
+        damping: 18, 
+        stiffness: 150,
+        mass: 0.5
+      });
+    }, 220);
   }, []);
 
   const handleGenderSelect = (gender: Gender) => {
@@ -170,7 +198,11 @@ function GenderButton({ label, isSelected, onPress }: GenderButtonProps) {
   const glowOpacity = useSharedValue(isSelected ? 0.3 : 0);
 
   useEffect(() => {
-    glowOpacity.value = withTiming(isSelected ? 0.3 : 0, { duration: 300 });
+    // Optimized for 120Hz - faster transition with smoother easing
+    glowOpacity.value = withTiming(isSelected ? 0.3 : 0, { 
+      duration: 250,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+    });
   }, [isSelected]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -182,9 +214,18 @@ function GenderButton({ label, isSelected, onPress }: GenderButtonProps) {
   }));
 
   const handlePress = () => {
+    // Optimized spring for 120Hz - higher damping and stiffness
     scale.value = withSequence(
-      withSpring(0.96, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 10, stiffness: 300 })
+      withSpring(0.96, { 
+        damping: 15, 
+        stiffness: 400,
+        mass: 0.5
+      }),
+      withSpring(1, { 
+        damping: 15, 
+        stiffness: 400,
+        mass: 0.5
+      })
     );
     onPress();
   };

@@ -19,21 +19,24 @@ export const unstable_settings = {
   // Removed anchor to allow root index.tsx to be the first screen
 };
 
-// Custom smooth transition configuration with optimized timing
+// Custom smooth transition configuration optimized for 120Hz displays
+// Reduced durations and optimized easing for higher frame rates
 const smoothTransition = {
   transitionSpec: {
     open: {
       animation: 'timing',
       config: {
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
+        duration: 250, // Reduced for snappier feel at 120Hz
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1), // Optimized bezier for 120Hz
+        useNativeDriver: true,
       },
     },
     close: {
       animation: 'timing',
       config: {
-        duration: 250,
-        easing: Easing.in(Easing.cubic),
+        duration: 200, // Reduced for snappier feel at 120Hz
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1), // Optimized bezier for 120Hz
+        useNativeDriver: true,
       },
     },
   },
@@ -51,14 +54,14 @@ const smoothTransition = {
             scale: next
               ? next.progress.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1, 0.97],
+                  outputRange: [1, 0.98], // Slightly less scale for smoother 120Hz
                 })
               : 1,
           },
         ],
         opacity: current.progress.interpolate({
-          inputRange: [0, 0.3, 0.7, 1],
-          outputRange: [0, 0.5, 0.85, 1],
+          inputRange: [0, 0.25, 0.75, 1], // More granular steps for 120Hz
+          outputRange: [0, 0.6, 0.9, 1],
         }),
       },
       overlayStyle: {
