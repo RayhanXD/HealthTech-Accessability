@@ -10,6 +10,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -126,7 +127,7 @@ export default function CreateAccountScreen({
     router.back();
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
     // Validate all fields
     const emailValid = validateEmail(email);
     const passwordValid = validatePassword(password);
@@ -141,7 +142,20 @@ export default function CreateAccountScreen({
     if (onCreateAccount) {
       onCreateAccount(email, password);
     } else {
-      router.push('/add-coach' as any);
+      // Check user role and navigate accordingly
+      try {
+        const userRole = await AsyncStorage.getItem('userRole');
+        if (userRole === 'coach') {
+          // Skip add-coach step for coaches
+          router.push('/congratulations' as any);
+        } else {
+          // Athletes need to add coach email
+          router.push('/add-coach' as any);
+        }
+      } catch (error) {
+        // If role not found, default to add-coach (athlete flow)
+        router.push('/add-coach' as any);
+      }
     }
   };
 

@@ -11,5 +11,5 @@ echo "Ruby: $(ruby --version)"
 echo "CocoaPods: $(pod --version 2>/dev/null || echo 'not found')"
 echo ""
 
-npx expo run:ios "$@"
+npx expo run:ios --device "iPhone 17 Pro Max" "$@"
 

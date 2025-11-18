@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
@@ -126,7 +127,12 @@ export default function CoachDashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[SemanticColors.background, SemanticColors.background, '#4C1D95']}
+      locations={[0, 0.6, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}>
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -359,7 +365,7 @@ export default function CoachDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -415,10 +421,9 @@ function AthleteRow({ athlete }: AthleteRowProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: SemanticColors.background,
   },
   navBar: {
-    backgroundColor: SemanticColors.background,
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
