@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { LineChart } from 'react-native-chart-kit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -97,7 +97,12 @@ export default function AthleteDashboardScreen() {
     : (StatusBar.currentHeight || 0) + 12;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[SemanticColors.background, SemanticColors.background, '#4C1D95']}
+      locations={[0, 0.6, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}>
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -303,13 +308,6 @@ export default function AthleteDashboardScreen() {
         {/* Missing Overnight Data */}
         <View style={styles.missingDataSection}>
           <View style={styles.missingDataHeader}>
-            <Image
-              source={{
-                uri: 'https://api.builder.io/api/v1/image/assets/TEMP/9e94ef2d8caf829c6ccb815a7f21d61a25c15ee9?width=52',
-              }}
-              style={styles.priorityIcon}
-              contentFit="contain"
-            />
             <Text style={styles.missingDataTitle}>Missing Overnight Data</Text>
           </View>
           <View style={styles.missingDataContent}>
@@ -323,7 +321,7 @@ export default function AthleteDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -361,10 +359,9 @@ function MetricCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: SemanticColors.background,
   },
   navBar: {
-    backgroundColor: SemanticColors.background,
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -451,6 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['3xl'],
   },
   progressTrendCard: {
+    backgroundColor: SemanticColors.background,
     borderWidth: 1,
     borderColor: SemanticColors.borderPrimary,
     borderRadius: BorderRadius.xl,
@@ -498,7 +496,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     width: '48%',
-    backgroundColor: SemanticColors.surface,
+    backgroundColor: SemanticColors.background,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     position: 'relative',
@@ -556,10 +554,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: Spacing.md,
   },
-  priorityIcon: {
-    width: 26,
-    height: 20,
-  },
   missingDataTitle: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semibold as any,
@@ -575,6 +569,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   dataEntryDropdown: {
+    backgroundColor: SemanticColors.background,
     borderWidth: 1,
     borderColor: SemanticColors.borderPrimary,
     borderRadius: BorderRadius.lg,
