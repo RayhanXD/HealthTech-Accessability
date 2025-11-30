@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { PieChart, BarChart } from 'react-native-gifted-charts';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
@@ -25,27 +26,50 @@ interface Athlete {
   id: number;
   name: string;
   status: string;
+  healthScore: number;
+  lastSync: string; // e.g., "2 hours ago", "Just now"
 }
 
 const athletes: Athlete[] = [
-  { id: 1, name: 'Name 1', status: 'Healthy' },
-  { id: 2, name: 'Name 2', status: 'Injured' },
-  { id: 3, name: 'Name 3', status: 'Suspended' },
-  { id: 4, name: 'Name 4', status: 'Healthy' },
-  { id: 5, name: 'Name 5', status: 'Healthy' },
-  { id: 6, name: 'Name 6', status: 'Healthy' },
-  { id: 7, name: 'Name 7', status: 'Injured' },
-  { id: 8, name: 'Name 8', status: 'Healthy' },
-  { id: 9, name: 'Name 9', status: 'Healthy' },
-  { id: 10, name: 'Name 10', status: 'Healthy' },
+  { id: 1, name: 'Name 1', status: 'Healthy', healthScore: 85, lastSync: '2 hours ago' },
+  { id: 2, name: 'Name 2', status: 'Injured', healthScore: 45, lastSync: '1 day ago' },
+  { id: 3, name: 'Name 3', status: 'Suspended', healthScore: 60, lastSync: '3 hours ago' },
+  { id: 4, name: 'Name 4', status: 'Healthy', healthScore: 92, lastSync: 'Just now' },
+  { id: 5, name: 'Name 5', status: 'Healthy', healthScore: 78, lastSync: '5 hours ago' },
+  { id: 6, name: 'Name 6', status: 'Healthy', healthScore: 88, lastSync: '1 hour ago' },
+  { id: 7, name: 'Name 7', status: 'Injured', healthScore: 52, lastSync: '2 days ago' },
+  { id: 8, name: 'Name 8', status: 'Healthy', healthScore: 90, lastSync: '30 mins ago' },
+  { id: 9, name: 'Name 9', status: 'Healthy', healthScore: 75, lastSync: '4 hours ago' },
+  { id: 10, name: 'Name 10', status: 'Healthy', healthScore: 82, lastSync: '3 hours ago' },
 ];
+
+type SortOption = 'name' | 'status' | 'healthScore';
+
+type TimePeriod = 'today' | 'week' | 'month';
 
 export default function CoachDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [sortAscending, setSortAscending] = useState(true);
   const router = useRouter();
   const iconAnim = useRef(new Animated.Value(0)).current; // 0 = hamburger, 1 = X
+  const scrollViewRef = useRef<ScrollView>(null);
+  const filterSectionY = useRef<number>(0);
+  
+  const handleExport = (format: 'pdf' | 'csv' | 'share') => {
+    setExportModalVisible(false);
+    // TODO: Implement actual export functionality
+    // For now, just log the action
+    console.log(`Exporting as ${format}`);
+    // In a real implementation, you would:
+    // - Generate PDF using a library like react-native-pdf or react-native-html-to-pdf
+    // - Generate CSV from athlete data
+    // - Use Share API to share data
+  };
 
   // Animate icon when settings modal opens/closes
   useEffect(() => {
@@ -64,12 +88,6 @@ export default function CoachDashboardScreen() {
     }
   }, [settingsVisible]);
 
-  const filteredAthletes = athletes.filter((athlete) => {
-    const matchesSearch = athlete.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterStatus === 'all' || athlete.status.toLowerCase() === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
 
   // Calculate pie chart data from athletes
   const pieChartData = useMemo(() => {
@@ -98,16 +116,58 @@ export default function CoachDashboardScreen() {
     ].filter(item => item.value > 0);
   }, []);
 
-  // Bar chart data
+  // Filter and sort athletes
+  const filteredAndSortedAthletes = useMemo(() => {
+    // Filter athletes
+    let filtered = athletes.filter((athlete) => {
+      const matchesSearch = athlete.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter =
+        filterStatus === 'all' || athlete.status.toLowerCase() === filterStatus;
+      return matchesSearch && matchesFilter;
+    });
+
+    // Sort athletes
+    filtered = [...filtered].sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'healthScore':
+          comparison = a.healthScore - b.healthScore;
+          break;
+      }
+      return sortAscending ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [searchQuery, filterStatus, sortBy, sortAscending]);
+
+  // Bar chart data with metric names
   const barChartData = [
-    { value: 82, label: 'M1' },
-    { value: 59, label: 'M2' },
-    { value: 10, label: 'M3' },
-    { value: 61, label: 'M4' },
-    { value: 48, label: 'M5' },
-    { value: 73, label: 'M6' },
-    { value: 54, label: 'M7' },
+    { value: 82, label: 'M1', metricName: 'Resting\nHeart Rate' },
+    { value: 59, label: 'M2', metricName: 'Heart Rate\nVariability' },
+    { value: 10, label: 'M3', metricName: 'Heart Rate\nRecovery' },
+    { value: 61, label: 'M4', metricName: 'Sleep\nQuality' },
+    { value: 48, label: 'M5', metricName: 'Sleep\nDuration' },
+    { value: 73, label: 'M6', metricName: 'Activity\nLevel' },
+    { value: 54, label: 'M7', metricName: 'Overall\nRecovery' },
   ];
+  
+  // Calculate team average
+  const teamAverage = Math.round(
+    barChartData.reduce((sum, item) => sum + item.value, 0) / barChartData.length
+  );
+  
+  // Previous period data for comparison
+  const previousPeriodData = [78, 55, 12, 58, 45, 70, 52];
+  const previousAverage = Math.round(
+    previousPeriodData.reduce((sum, val) => sum + val, 0) / previousPeriodData.length
+  );
+  const averageChange = teamAverage - previousAverage;
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
@@ -130,6 +190,7 @@ export default function CoachDashboardScreen() {
       />
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -211,18 +272,59 @@ export default function CoachDashboardScreen() {
 
         {/* Team Analytics */}
         <View style={styles.teamAnalyticsSection}>
-          <Text style={styles.sectionTitle}>Team Analytics</Text>
+          <View style={styles.analyticsHeader}>
+            <Text style={styles.sectionTitle}>Team Analytics</Text>
+            <View style={styles.timePeriodSelector}>
+              <TimePeriodButton
+                label="Today"
+                isSelected={timePeriod === 'today'}
+                onPress={() => setTimePeriod('today')}
+              />
+              <TimePeriodButton
+                label="Week"
+                isSelected={timePeriod === 'week'}
+                onPress={() => setTimePeriod('week')}
+              />
+              <TimePeriodButton
+                label="Month"
+                isSelected={timePeriod === 'month'}
+                onPress={() => setTimePeriod('month')}
+              />
+            </View>
+          </View>
           <View style={styles.analyticsGrid}>
             <View style={styles.analyticsCard}>
               <Text style={styles.analyticsLabel}>Total Athletes</Text>
               <Text style={styles.analyticsValue}>10</Text>
-              <Text style={styles.analyticsChange}>+2</Text>
             </View>
             <View style={styles.analyticsCard}>
               <Text style={styles.analyticsLabel}>Avg. Performance</Text>
               <Text style={styles.analyticsValue}>75%</Text>
-              <Text style={styles.analyticsChange}>+5%</Text>
             </View>
+            <View style={[styles.analyticsCard, styles.atRiskCard]}>
+              <Text style={styles.analyticsLabel}>At Risk Athletes</Text>
+              <Text style={[styles.analyticsValue, styles.atRiskValue]}>3</Text>
+            </View>
+          </View>
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                setFilterStatus('injured');
+                // Scroll to filter section after a short delay
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({ y: filterSectionY.current - 20, animated: true });
+                }, 100);
+              }}
+              activeOpacity={0.7}>
+              <Text style={styles.quickActionText}>View All Injured</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.exportButton]}
+              onPress={() => setExportModalVisible(true)}
+              activeOpacity={0.7}>
+              <Text style={[styles.quickActionText, styles.exportButtonText]}>Export Report</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -231,9 +333,26 @@ export default function CoachDashboardScreen() {
           <View style={styles.distributionCard}>
             <Text style={styles.distributionTitle}>Athlete Status Distribution</Text>
             <Text style={styles.distributionSubtitle}>Count</Text>
+            <Text style={styles.distributionHint}>Click segments or legend to filter players</Text>
             <View style={styles.pieChartContainer}>
               <PieChart
-                data={pieChartData}
+                data={pieChartData.map((item) => ({
+                  ...item,
+                  onPress: () => {
+                    // Map pie chart text to filter status
+                    const statusMap: Record<string, FilterStatus> = {
+                      'Healthy': 'healthy',
+                      'Injured': 'injured',
+                      'Suspended': 'suspended',
+                    };
+                    const filterStatus = statusMap[item.text] || 'all';
+                    setFilterStatus(filterStatus);
+                    // Scroll to filter section after a short delay
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({ y: filterSectionY.current - 20, animated: true });
+                    }, 100);
+                  },
+                }))}
                 radius={80}
                 focusOnPress
                 showText={false}
@@ -255,12 +374,31 @@ export default function CoachDashboardScreen() {
               />
             </View>
             <View style={styles.pieChartLegend}>
-              {pieChartData.map((item, index) => (
-                <View key={index} style={styles.legendItem}>
-                  <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                  <Text style={styles.legendText}>{item.text}: {item.value}</Text>
-                </View>
-              ))}
+              {pieChartData.map((item, index) => {
+                const statusMap: Record<string, FilterStatus> = {
+                  'Healthy': 'healthy',
+                  'Injured': 'injured',
+                  'Suspended': 'suspended',
+                };
+                const filterStatus = statusMap[item.text] || 'all';
+                
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.legendItem}
+                    onPress={() => {
+                      setFilterStatus(filterStatus);
+                      // Scroll to filter section after a short delay
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollTo({ y: filterSectionY.current - 20, animated: true });
+                      }, 100);
+                    }}
+                    activeOpacity={0.7}>
+                    <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                    <Text style={styles.legendText}>{item.text}: {item.value}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <Text style={styles.distributionLabel}>Status</Text>
           </View>
@@ -269,8 +407,29 @@ export default function CoachDashboardScreen() {
         {/* Team Performance Metrics */}
         <View style={styles.performanceSection}>
           <View style={styles.performanceCard}>
-            <Text style={styles.performanceTitle}>Team Performance Metrics</Text>
-            <Text style={styles.performanceSubtitle}>Scores</Text>
+            <View style={styles.performanceHeader}>
+              <View>
+                <Text style={styles.performanceTitle}>Team Performance Metrics</Text>
+                <Text style={styles.performanceSubtitle}>Scores</Text>
+              </View>
+              <View style={styles.performanceComparison}>
+                <Text style={styles.comparisonLabel}>Avg: {teamAverage}%</Text>
+                <View style={styles.comparisonChange}>
+                  <Text style={[
+                    styles.comparisonArrow,
+                    averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
+                  ]}>
+                    {averageChange >= 0 ? '↑' : '↓'}
+                  </Text>
+                  <Text style={[
+                    styles.comparisonValue,
+                    averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
+                  ]}>
+                    {Math.abs(averageChange)}% vs last period
+                  </Text>
+                </View>
+              </View>
+            </View>
             <View style={styles.barChartContainer}>
               <BarChart
                 data={barChartData}
@@ -307,13 +466,54 @@ export default function CoachDashboardScreen() {
                 verticalLinesThickness={0.5}
                 showReferenceLine1
                 referenceLine1Config={{
-                  color: SemanticColors.borderMuted,
-                  thickness: 1,
-                  type: 'dashed',
+                  color: SemanticColors.primary,
+                  thickness: 2,
+                  type: 'solid',
+                }}
+                onPress={(item: any, index: number) => {
+                  // TODO: Navigate to athlete details or show metric breakdown
+                  console.log(`Pressed ${barChartData[index].metricName}: ${item.value}%`);
                 }}
               />
             </View>
-            <Text style={styles.performanceLabel}>Metrics</Text>
+            <View style={styles.metricLabels}>
+              {/* Top row - first 3 metrics */}
+              <View style={styles.metricRow}>
+                {barChartData.slice(0, 3).map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.metricLabelItem}
+                    onPress={() => {
+                      // TODO: Show metric details
+                      console.log(`View details for ${item.metricName}`);
+                    }}
+                    activeOpacity={0.7}>
+                    <Text style={styles.metricLabelText}>{item.label}</Text>
+                    <Text style={styles.metricNameText} numberOfLines={2}>
+                      {item.metricName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* Bottom row - last 4 metrics */}
+              <View style={styles.metricRow}>
+                {barChartData.slice(3, 7).map((item, index) => (
+                  <TouchableOpacity
+                    key={index + 3}
+                    style={styles.metricLabelItem}
+                    onPress={() => {
+                      // TODO: Show metric details
+                      console.log(`View details for ${item.metricName}`);
+                    }}
+                    activeOpacity={0.7}>
+                    <Text style={styles.metricLabelText}>{item.label}</Text>
+                    <Text style={styles.metricNameText} numberOfLines={2}>
+                      {item.metricName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
         </View>
 
@@ -335,7 +535,12 @@ export default function CoachDashboardScreen() {
         </View>
 
         {/* Filter Athletes */}
-        <View style={styles.filterSection}>
+        <View
+          style={styles.filterSection}
+          onLayout={(event) => {
+            const { y } = event.nativeEvent.layout;
+            filterSectionY.current = y;
+          }}>
           <Text style={styles.filterTitle}>Filter Athletes</Text>
           <View style={styles.filterButtons}>
             <FilterButton
@@ -364,14 +569,135 @@ export default function CoachDashboardScreen() {
 
         {/* Athlete Roster */}
         <View style={styles.rosterSection}>
-          <Text style={styles.rosterTitle}>Athlete Roster</Text>
+          <View style={styles.rosterHeader}>
+            <Text style={styles.rosterTitle}>Athlete Roster</Text>
+            <View style={styles.sortContainer}>
+              <Text style={styles.sortLabel}>Sort by:</Text>
+              <View style={styles.sortButtons}>
+                <TouchableOpacity
+                  style={[styles.sortButton, sortBy === 'name' && styles.sortButtonSelected]}
+                  onPress={() => {
+                    if (sortBy === 'name') {
+                      setSortAscending(!sortAscending);
+                    } else {
+                      setSortBy('name');
+                      setSortAscending(true);
+                    }
+                  }}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.sortButtonText, sortBy === 'name' && styles.sortButtonTextSelected]}>
+                    Name {sortBy === 'name' && (sortAscending ? '↑' : '↓')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sortButton, sortBy === 'status' && styles.sortButtonSelected]}
+                  onPress={() => {
+                    if (sortBy === 'status') {
+                      setSortAscending(!sortAscending);
+                    } else {
+                      setSortBy('status');
+                      setSortAscending(true);
+                    }
+                  }}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.sortButtonText, sortBy === 'status' && styles.sortButtonTextSelected]}>
+                    Status {sortBy === 'status' && (sortAscending ? '↑' : '↓')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sortButton, sortBy === 'healthScore' && styles.sortButtonSelected]}
+                  onPress={() => {
+                    if (sortBy === 'healthScore') {
+                      setSortAscending(!sortAscending);
+                    } else {
+                      setSortBy('healthScore');
+                      setSortAscending(false);
+                    }
+                  }}
+                  activeOpacity={0.7}>
+                  <Text style={[styles.sortButtonText, sortBy === 'healthScore' && styles.sortButtonTextSelected]}>
+                    Score {sortBy === 'healthScore' && (sortAscending ? '↑' : '↓')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
           <View style={styles.rosterList}>
-            {filteredAthletes.map((athlete) => (
+            {filteredAndSortedAthletes.map((athlete) => (
               <AthleteRow key={athlete.id} athlete={athlete} />
             ))}
           </View>
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+interface ExportModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onExport: (format: 'pdf' | 'csv' | 'share') => void;
+}
+
+function ExportModal({ visible, onClose, onExport }: ExportModalProps) {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.modalOverlay}>
+      <View style={styles.exportModal}>
+        <View style={styles.exportModalHeader}>
+          <Text style={styles.exportModalTitle}>Export Report</Text>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
+            <Ionicons name="close" size={24} color={SemanticColors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.exportModalDescription}>
+          Choose how you'd like to export the team data:
+        </Text>
+        <View style={styles.exportOptions}>
+          <TouchableOpacity
+            style={styles.exportOption}
+            onPress={() => onExport('pdf')}
+            activeOpacity={0.7}>
+            <Ionicons name="document-text" size={24} color={SemanticColors.primary} />
+            <View style={styles.exportOptionContent}>
+              <Text style={styles.exportOptionTitle}>PDF Report</Text>
+              <Text style={styles.exportOptionDescription}>
+                Generate a PDF report for medical professionals
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={SemanticColors.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.exportOption}
+            onPress={() => onExport('csv')}
+            activeOpacity={0.7}>
+            <Ionicons name="document" size={24} color={SemanticColors.primary} />
+            <View style={styles.exportOptionContent}>
+              <Text style={styles.exportOptionTitle}>CSV Data</Text>
+              <Text style={styles.exportOptionDescription}>
+                Export raw data as CSV for analysis
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={SemanticColors.textSecondary} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.exportOption}
+            onPress={() => onExport('share')}
+            activeOpacity={0.7}>
+            <Ionicons name="share-social" size={24} color={SemanticColors.primary} />
+            <View style={styles.exportOptionContent}>
+              <Text style={styles.exportOptionTitle}>Share Progress</Text>
+              <Text style={styles.exportOptionDescription}>
+                Share progress with coach or trainer
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={SemanticColors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -383,13 +709,80 @@ interface FilterButtonProps {
 }
 
 function FilterButton({ label, isSelected, onPress }: FilterButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
   return (
-    <TouchableOpacity
-      style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
-      onPress={onPress}
-      activeOpacity={0.7}>
-      <Text style={styles.filterButtonText}>{label}</Text>
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}>
+        <Text style={styles.filterButtonText}>{label}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+interface TimePeriodButtonProps {
+  label: string;
+  isSelected: boolean;
+  onPress: () => void;
+}
+
+function TimePeriodButton({ label, isSelected, onPress }: TimePeriodButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[styles.timePeriodButton, isSelected && styles.timePeriodButtonSelected]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}>
+        <Text style={[styles.timePeriodButtonText, isSelected && styles.timePeriodButtonTextSelected]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -398,8 +791,79 @@ interface AthleteRowProps {
 }
 
 function AthleteRow({ athlete }: AthleteRowProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+  
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
+  };
+  
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return SemanticColors.zoneGreen;
+      case 'injured':
+        return SemanticColors.zoneRed;
+      case 'suspended':
+        return '#6B6B6B';
+      default:
+        return SemanticColors.borderMuted;
+    }
+  };
+
+  const getHealthScoreColor = (score: number) => {
+    if (score >= 80) return SemanticColors.zoneGreen;
+    if (score >= 60) return SemanticColors.zoneYellow;
+    return SemanticColors.zoneRed;
+  };
+
   return (
-    <View style={styles.athleteRow}>
+    <Animated.View 
+      style={[
+        styles.athleteRow,
+        {
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        }
+      ]}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+        {/* Status indicator dot */}
+        <View style={[styles.statusDot, { backgroundColor: getStatusColor(athlete.status) }]} />
+      
       <Image
         source={{
           uri: 'https://api.builder.io/api/v1/image/assets/TEMP/a03a045d12504f2f31d8c20dabf00706eb0a0772?width=54',
@@ -408,20 +872,40 @@ function AthleteRow({ athlete }: AthleteRowProps) {
         contentFit="cover"
       />
       <View style={styles.athleteInfo}>
-        <Text style={styles.athleteName}>{athlete.name}</Text>
-        <Text style={styles.athleteStatus}>Status: {athlete.status}</Text>
+        <View style={styles.athleteNameRow}>
+          <Text style={styles.athleteName}>{athlete.name}</Text>
+          {/* Health score badge */}
+          <View style={[styles.healthScoreBadge, { backgroundColor: getHealthScoreColor(athlete.healthScore) }]}>
+            <Text style={styles.healthScoreBadgeText}>{athlete.healthScore}%</Text>
+          </View>
+        </View>
+        <View style={styles.athleteMetaRow}>
+          <Text style={styles.athleteStatus}>Status: {athlete.status}</Text>
+          <Text style={styles.lastSyncText}>• Synced: {athlete.lastSync}</Text>
+        </View>
       </View>
-      <TouchableOpacity style={styles.viewAnalyticsButton} activeOpacity={0.7}>
-        <Text style={styles.viewAnalyticsText}>View Analytics</Text>
-        <Image
-          source={{
-            uri: 'https://api.builder.io/api/v1/image/assets/TEMP/8ea281e31dab7273b02f1758129a94e3a56abf37?width=64',
+      <View style={styles.athleteActions}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            // TODO: Navigate to athlete details
+            console.log(`View details for ${athlete.name}`);
           }}
-          style={styles.arrowIcon}
-          contentFit="contain"
-        />
+          activeOpacity={0.7}>
+          <Text style={styles.actionButtonText}>Details</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.alertButton]}
+          onPress={() => {
+            // TODO: Send alert to athlete
+            console.log(`Send alert to ${athlete.name}`);
+          }}
+          activeOpacity={0.7}>
+          <Text style={[styles.actionButtonText, styles.alertButtonText]}>Alert</Text>
+        </TouchableOpacity>
+      </View>
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -485,11 +969,40 @@ const styles = StyleSheet.create({
     paddingTop: Spacing['2xl'],
     paddingBottom: Spacing.xl,
   },
+  analyticsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: Typography.fontWeight.semibold as any,
     color: SemanticColors.primary,
-    marginBottom: Spacing.lg,
+  },
+  timePeriodSelector: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  timePeriodButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderMuted,
+  },
+  timePeriodButtonSelected: {
+    backgroundColor: SemanticColors.primary,
+    borderColor: SemanticColors.primary,
+  },
+  timePeriodButtonText: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
+    fontWeight: Typography.fontWeight.medium as any,
+  },
+  timePeriodButtonTextSelected: {
+    color: SemanticColors.textOnPrimary,
   },
   analyticsGrid: {
     flexDirection: 'row',
@@ -510,16 +1023,66 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     fontWeight: Typography.fontWeight.medium as any,
   },
+  analyticsValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   analyticsValue: {
     fontSize: 28,
     fontWeight: Typography.fontWeight.semibold as any,
     color: SemanticColors.primary,
-    marginBottom: Spacing.xs,
   },
-  analyticsChange: {
-    fontSize: Typography.fontSize.base,
+  trendIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  trendArrow: {
+    fontSize: 14,
+    color: SemanticColors.success,
+    fontWeight: Typography.fontWeight.bold as any,
+  },
+  trendDown: {
+    color: SemanticColors.error,
+  },
+  trendText: {
+    fontSize: Typography.fontSize.sm,
     color: SemanticColors.success,
     fontWeight: Typography.fontWeight.medium as any,
+  },
+  atRiskCard: {
+    borderColor: SemanticColors.error,
+  },
+  atRiskValue: {
+    color: SemanticColors.error,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: SemanticColors.primary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportButton: {
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderPrimary,
+  },
+  quickActionText: {
+    fontSize: Typography.fontSize.md,
+    color: SemanticColors.textOnPrimary,
+    fontWeight: Typography.fontWeight.semibold as any,
+  },
+  exportButtonText: {
+    color: SemanticColors.textPrimary,
   },
   distributionSection: {
     paddingHorizontal: Spacing.lg,
@@ -541,7 +1104,13 @@ const styles = StyleSheet.create({
   distributionSubtitle: {
     fontSize: Typography.fontSize.base,
     color: SemanticColors.textSecondary,
+    marginBottom: Spacing.xs,
+  },
+  distributionHint: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textTertiary,
     marginBottom: Spacing.lg,
+    fontStyle: 'italic',
   },
   pieChartContainer: {
     alignItems: 'center',
@@ -588,6 +1157,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
   },
+  performanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
+  },
   performanceTitle: {
     fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.semibold as any,
@@ -597,7 +1172,34 @@ const styles = StyleSheet.create({
   performanceSubtitle: {
     fontSize: Typography.fontSize.base,
     color: SemanticColors.textSecondary,
-    marginBottom: Spacing.lg,
+  },
+  performanceComparison: {
+    alignItems: 'flex-end',
+  },
+  comparisonLabel: {
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold as any,
+    marginBottom: Spacing.xs,
+  },
+  comparisonChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  comparisonArrow: {
+    fontSize: 12,
+    fontWeight: Typography.fontWeight.bold as any,
+  },
+  comparisonValue: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium as any,
+  },
+  comparisonPositive: {
+    color: SemanticColors.success,
+  },
+  comparisonNegative: {
+    color: SemanticColors.error,
   },
   barChartContainer: {
     borderWidth: 1,
@@ -608,11 +1210,33 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     overflow: 'hidden',
   },
-  performanceLabel: {
+  metricLabels: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  metricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.xs,
+  },
+  metricLabelItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+  },
+  metricLabelText: {
     fontSize: Typography.fontSize.sm,
-    color: SemanticColors.textSecondary,
-    textAlign: 'right',
-    marginTop: Spacing.sm,
+    color: SemanticColors.textPrimary,
+    fontWeight: Typography.fontWeight.semibold as any,
+    marginBottom: 2,
+  },
+  metricNameText: {
+    fontSize: Typography.fontSize.xs,
+    color: SemanticColors.textTertiary,
+    textAlign: 'center',
+    minHeight: 32,
+    lineHeight: 16,
   },
   searchSection: {
     paddingHorizontal: Spacing.lg,
@@ -683,11 +1307,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xl,
   },
+  rosterHeader: {
+    marginBottom: Spacing.lg,
+  },
   rosterTitle: {
     fontSize: 20,
     fontWeight: Typography.fontWeight.semibold as any,
     color: SemanticColors.primary,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  sortLabel: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
+  },
+  sortButtons: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    flexWrap: 'wrap',
+  },
+  sortButton: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderMuted,
+  },
+  sortButtonSelected: {
+    backgroundColor: SemanticColors.primary,
+    borderColor: SemanticColors.primary,
+  },
+  sortButtonText: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
+    fontWeight: Typography.fontWeight.medium as any,
+  },
+  sortButtonTextSelected: {
+    color: SemanticColors.textOnPrimary,
   },
   rosterList: {
     gap: 0,
@@ -701,6 +1363,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: SemanticColors.borderMuted,
   },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   athleteAvatar: {
     width: 40,
     height: 40,
@@ -710,32 +1377,132 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: Spacing.xs,
   },
+  athleteNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: 4,
+  },
   athleteName: {
     fontSize: 15,
     color: SemanticColors.textPrimary,
     fontWeight: Typography.fontWeight.medium as any,
-    marginBottom: 2,
+  },
+  healthScoreBadge: {
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  healthScoreBadgeText: {
+    fontSize: Typography.fontSize.xs,
+    color: SemanticColors.textOnSurface,
+    fontWeight: Typography.fontWeight.semibold as any,
+  },
+  athleteMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexWrap: 'wrap',
   },
   athleteStatus: {
-    fontSize: Typography.fontSize.base,
+    fontSize: Typography.fontSize.sm,
     color: SemanticColors.textSecondary,
   },
-  viewAnalyticsButton: {
+  lastSyncText: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textTertiary,
+  },
+  athleteActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  actionButton: {
     backgroundColor: SemanticColors.primary,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    flexDirection: 'row',
+    minWidth: 60,
     alignItems: 'center',
-    gap: 6,
   },
-  viewAnalyticsText: {
+  actionButtonText: {
     color: SemanticColors.textOnPrimary,
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semibold as any,
   },
-  arrowIcon: {
-    width: 32,
-    height: 19,
+  alertButton: {
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderPrimary,
+  },
+  alertButtonText: {
+    color: SemanticColors.textPrimary,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  exportModal: {
+    backgroundColor: SemanticColors.background,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  exportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  exportModalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.primary,
+  },
+  modalCloseButton: {
+    padding: Spacing.xs,
+  },
+  exportModalDescription: {
+    fontSize: Typography.fontSize.base,
+    color: SemanticColors.textSecondary,
+    marginBottom: Spacing.lg,
+  },
+  exportOptions: {
+    gap: Spacing.md,
+  },
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    backgroundColor: SemanticColors.surfaceSecondary,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: SemanticColors.borderPrimary,
+    gap: Spacing.md,
+  },
+  exportOptionContent: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  exportOptionTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold as any,
+    color: SemanticColors.textPrimary,
+  },
+  exportOptionDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
   },
 });
