@@ -11,13 +11,13 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-gifted-charts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
 import { useSahha } from '@/lib/sahha/useSahha';
+import PatternOverlay from './pattern-overlay';
 
 export default function AthleteDashboardScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -76,17 +76,15 @@ export default function AthleteDashboardScreen() {
   };
 
   // Line chart data for progress trend
-  const lineChartData = {
-    labels: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'],
-    datasets: [
-      {
-        data: [20, 45, 28, 80, 99, 43, 50],
-        color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-        strokeWidth: 3,
-      },
-    ],
-    legend: ['Progress'],
-  };
+  const lineChartData = [
+    { value: 20, label: 'D1' },
+    { value: 45, label: 'D2' },
+    { value: 28, label: 'D3' },
+    { value: 80, label: 'D4' },
+    { value: 99, label: 'D5' },
+    { value: 43, label: 'D6' },
+    { value: 50, label: 'D7' },
+  ];
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
@@ -97,12 +95,8 @@ export default function AthleteDashboardScreen() {
     : (StatusBar.currentHeight || 0) + 12;
 
   return (
-    <LinearGradient
-      colors={[SemanticColors.background, SemanticColors.background, '#4C1D95']}
-      locations={[0, 0.6, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}>
+    <View style={styles.container}>
+      <PatternOverlay patternType="graph" opacity={0.3} />
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -220,42 +214,45 @@ export default function AthleteDashboardScreen() {
                 data={lineChartData}
                 width={screenWidth - 72}
                 height={180}
-                chartConfig={{
-                  backgroundColor: BrandColors.black,
-                  backgroundGradientFrom: BrandColors.black,
-                  backgroundGradientTo: BrandColors.black,
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  style: {
-                    borderRadius: 6,
-                  },
-                  propsForDots: {
-                    r: '5',
-                    strokeWidth: '2',
-                    stroke: BrandColors.purple,
-                    fill: BrandColors.purple,
-                  },
-                  propsForBackgroundLines: {
-                    strokeDasharray: '3 3',
-                    stroke: BrandColors.white,
-                    strokeOpacity: 0.5,
-                  },
-                  propsForLabels: {
-                    fontSize: 10,
-                  },
+                spacing={40}
+                thickness={3}
+                color={BrandColors.purple}
+                hideRules={false}
+                hideYAxisText={false}
+                yAxisColor={SemanticColors.borderMuted}
+                xAxisColor={SemanticColors.borderMuted}
+                rulesColor={SemanticColors.borderMuted}
+                rulesType="solid"
+                curved
+                areaChart
+                startFillColor={BrandColors.purple}
+                endFillColor={BrandColors.purple}
+                startOpacity={0.2}
+                endOpacity={0.05}
+                initialSpacing={0}
+                noOfSections={4}
+                maxValue={100}
+                yAxisTextStyle={{
+                  color: SemanticColors.textSecondary,
+                  fontSize: 10,
                 }}
-                bezier
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 6,
+                xAxisLabelTextStyle={{
+                  color: SemanticColors.textSecondary,
+                  fontSize: 10,
                 }}
-                withInnerLines={true}
-                withOuterLines={true}
-                withVerticalLines={false}
-                withHorizontalLines={true}
-                withDots={true}
-                withShadow={false}
+                dataPointsColor={BrandColors.purple}
+                dataPointsRadius={5}
+                textShiftY={-2}
+                textShiftX={-5}
+                textFontSize={10}
+                textColor={SemanticColors.textSecondary}
+                showVerticalLines
+                verticalLinesColor={SemanticColors.borderMuted}
+                verticalLinesThickness={0.5}
+                showStripOnFingerPress
+                stripColor={BrandColors.purple}
+                stripOpacity={0.3}
+                stripWidth={2}
               />
             </View>
             <Text style={styles.daysLabel}>Days</Text>
@@ -321,7 +318,7 @@ export default function AthleteDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -359,6 +356,7 @@ function MetricCard({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: SemanticColors.background,
   },
   navBar: {
     backgroundColor: 'transparent',

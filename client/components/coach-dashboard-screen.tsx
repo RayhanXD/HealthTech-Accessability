@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import { PieChart, BarChart } from 'react-native-chart-kit';
+import { PieChart, BarChart } from 'react-native-gifted-charts';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
+import PatternOverlay from './pattern-overlay';
 
 type FilterStatus = 'all' | 'healthy' | 'injured' | 'suspended';
 
@@ -81,38 +81,33 @@ export default function CoachDashboardScreen() {
 
     return [
       {
-        name: 'Healthy',
-        population: statusCounts.healthy || 0,
-        color: '#8CD47E',
-        legendFontColor: BrandColors.white,
-        legendFontSize: 12,
+        value: statusCounts.healthy || 0,
+        color: BrandColors.purple, // Light purple
+        text: 'Healthy',
       },
       {
-        name: 'Injured',
-        population: statusCounts.injured || 0,
-        color: '#FF6961',
-        legendFontColor: BrandColors.white,
-        legendFontSize: 12,
+        value: statusCounts.injured || 0,
+        color: BrandColors.purpleDark, // Darker purple
+        text: 'Injured',
       },
       {
-        name: 'Suspended',
-        population: statusCounts.suspended || 0,
-        color: '#F8D66D',
-        legendFontColor: BrandColors.white,
-        legendFontSize: 12,
+        value: statusCounts.suspended || 0,
+        color: '#6B6B6B', // Medium gray
+        text: 'Suspended',
       },
-    ].filter(item => item.population > 0);
+    ].filter(item => item.value > 0);
   }, []);
 
   // Bar chart data
-  const barChartData = {
-    labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'],
-    datasets: [
-      {
-        data: [82, 59, 10, 61, 48, 73, 54],
-      },
-    ],
-  };
+  const barChartData = [
+    { value: 82, label: 'M1' },
+    { value: 59, label: 'M2' },
+    { value: 10, label: 'M3' },
+    { value: 61, label: 'M4' },
+    { value: 48, label: 'M5' },
+    { value: 73, label: 'M6' },
+    { value: 54, label: 'M7' },
+  ];
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
@@ -127,12 +122,8 @@ export default function CoachDashboardScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={[SemanticColors.background, SemanticColors.background, '#4C1D95']}
-      locations={[0, 0.6, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={styles.container}>
+    <View style={styles.container}>
+      <PatternOverlay patternType="graph" opacity={0.3} />
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -243,20 +234,33 @@ export default function CoachDashboardScreen() {
             <View style={styles.pieChartContainer}>
               <PieChart
                 data={pieChartData}
-                width={screenWidth - 72}
-                height={200}
-                chartConfig={{
-                  backgroundColor: BrandColors.black,
-                  backgroundGradientFrom: BrandColors.black,
-                  backgroundGradientTo: BrandColors.black,
-                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                radius={80}
+                focusOnPress
+                showText={false}
+                strokeWidth={2}
+                strokeColor={SemanticColors.background}
+                centerLabelComponent={() => {
+                  const total = pieChartData.reduce((sum, item) => sum + item.value, 0);
+                  return (
+                    <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 20, color: SemanticColors.textPrimary, fontWeight: 'bold' }}>
+                        {total}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: SemanticColors.textSecondary }}>
+                        Total
+                      </Text>
+                    </View>
+                  );
                 }}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="15"
-                absolute
               />
+            </View>
+            <View style={styles.pieChartLegend}>
+              {pieChartData.map((item, index) => (
+                <View key={index} style={styles.legendItem}>
+                  <View style={[styles.legendColor, { backgroundColor: item.color }]} />
+                  <Text style={styles.legendText}>{item.text}: {item.value}</Text>
+                </View>
+              ))}
             </View>
             <Text style={styles.distributionLabel}>Status</Text>
           </View>
@@ -272,38 +276,41 @@ export default function CoachDashboardScreen() {
                 data={barChartData}
                 width={screenWidth - 72}
                 height={180}
-                chartConfig={{
-                  backgroundColor: BrandColors.black,
-                  backgroundGradientFrom: BrandColors.black,
-                  backgroundGradientTo: BrandColors.black,
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                  fillShadowGradient: BrandColors.purple,
-                  fillShadowGradientOpacity: 0.8,
-                  style: {
-                    borderRadius: 6,
-                  },
-                  propsForBackgroundLines: {
-                    strokeDasharray: '3 3',
-                    stroke: BrandColors.white,
-                    strokeOpacity: 0.5,
-                  },
-                  propsForLabels: {
-                    fontSize: 10,
-                  },
+                spacing={30}
+                barWidth={30}
+                noOfSections={4}
+                maxValue={100}
+                yAxisThickness={1}
+                xAxisThickness={1}
+                yAxisTextStyle={{
+                  color: SemanticColors.textSecondary,
+                  fontSize: 10,
                 }}
-                fromZero
-                showValuesOnTopOfBars={false}
-                withInnerLines={false}
-                withHorizontalLabels={true}
-                withVerticalLabels={false}
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 6,
+                xAxisLabelTextStyle={{
+                  color: SemanticColors.textSecondary,
+                  fontSize: 10,
                 }}
-                yAxisLabel=""
-                yAxisSuffix=""
+                frontColor={BrandColors.purple}
+                gradientColor={BrandColors.purpleDark}
+                isAnimated
+                animationDuration={800}
+                showGradient
+                roundedTop
+                roundedBottom
+                hideRules={false}
+                rulesColor={SemanticColors.borderMuted}
+                rulesType="solid"
+                yAxisColor={SemanticColors.borderMuted}
+                xAxisColor={SemanticColors.borderMuted}
+                showVerticalLines
+                verticalLinesColor={SemanticColors.borderMuted}
+                verticalLinesThickness={0.5}
+                showReferenceLine1
+                referenceLine1Config={{
+                  color: SemanticColors.borderMuted,
+                  thickness: 1,
+                  type: 'dashed',
+                }}
               />
             </View>
             <Text style={styles.performanceLabel}>Metrics</Text>
@@ -365,7 +372,7 @@ export default function CoachDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -421,6 +428,7 @@ function AthleteRow({ athlete }: AthleteRowProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: SemanticColors.background,
   },
   navBar: {
     backgroundColor: 'transparent',
@@ -489,6 +497,7 @@ const styles = StyleSheet.create({
   },
   analyticsCard: {
     flex: 1,
+    backgroundColor: SemanticColors.background,
     borderWidth: 1,
     borderColor: SemanticColors.borderPrimary,
     borderRadius: BorderRadius.xl,
@@ -517,6 +526,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['3xl'],
   },
   distributionCard: {
+    backgroundColor: SemanticColors.background,
     borderWidth: 1,
     borderColor: SemanticColors.borderPrimary,
     borderRadius: BorderRadius.xl,
@@ -539,6 +549,28 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xl,
     overflow: 'hidden',
   },
+  pieChartLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendText: {
+    fontSize: Typography.fontSize.sm,
+    color: SemanticColors.textSecondary,
+  },
   distributionLabel: {
     fontSize: Typography.fontSize.sm,
     color: SemanticColors.textSecondary,
@@ -550,6 +582,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['3xl'],
   },
   performanceCard: {
+    backgroundColor: SemanticColors.background,
     borderWidth: 1,
     borderColor: SemanticColors.borderPrimary,
     borderRadius: BorderRadius.xl,
