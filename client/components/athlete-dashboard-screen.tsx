@@ -797,7 +797,8 @@ function HealthMetricCard({
           </Text>
         </View>
       </View>
-    </View>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
