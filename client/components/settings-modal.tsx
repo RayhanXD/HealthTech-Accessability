@@ -123,18 +123,18 @@ export default function SettingsModal({ visible, onClose }: SettingsModalProps) 
         handleClose();
         router.push('/profile');
         break;
-      case 'notifications':
-        Alert.alert('Notifications', 'Notification preferences coming soon!');
-        break;
       case 'health':
-        Alert.alert('Health Data', 'Health data settings coming soon!');
-        break;
+        handleClose();
+        router.push('/health-data');
+        break;        
       case 'privacy':
-        Alert.alert('Privacy', 'Privacy settings coming soon!');
+        handleClose();
+        router.push('/privacy-security');
         break;
       case 'help':
-        Alert.alert('Help & Support', 'Help center coming soon!');
-        break;
+          handleClose();
+          router.push('/help-support');
+          break;
       case 'about':
         handleClose();
         router.push('/about');
