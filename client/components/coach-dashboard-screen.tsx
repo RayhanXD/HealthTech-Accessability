@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     color: SemanticColors.textPrimary,
     fontSize: 32,
     fontWeight: Typography.fontWeight.semibold as any,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   navIcons: {
     flexDirection: 'row',
