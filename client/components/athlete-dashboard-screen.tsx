@@ -12,13 +12,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { LineChart } from 'react-native-gifted-charts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
 import { useSahha } from '@/lib/sahha/useSahha';
-import PatternOverlay from './pattern-overlay';
 
 export default function AthleteDashboardScreen() {
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -168,8 +168,11 @@ export default function AthleteDashboardScreen() {
     : (StatusBar.currentHeight || 0) + 12;
 
   return (
-    <View style={styles.container}>
-      <PatternOverlay patternType="graph" opacity={0.3} />
+    <LinearGradient
+      colors={[SemanticColors.background, '#1a0a2e']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}>
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -259,10 +262,6 @@ export default function AthleteDashboardScreen() {
         <View style={styles.healthScoreSection}>
           <View style={styles.healthScoreHeader}>
             <Text style={styles.healthScoreTitle}>Overall Health Score (AHS)</Text>
-            <View style={styles.trendBadge}>
-              <Text style={styles.trendArrow}>↑</Text>
-              <Text style={styles.trendText}>+{healthScoreTrend}%</Text>
-            </View>
           </View>
           <TouchableOpacity
             style={styles.healthScoreCard}
@@ -485,75 +484,6 @@ export default function AthleteDashboardScreen() {
           </View>
         </View>
 
-        {/* Alerts & Notifications */}
-        <View style={styles.alertsSection}>
-          <Text style={styles.alertsTitle}>Alerts & Recommendations</Text>
-          
-          {/* Warning Banner */}
-          {alerts.filter(a => a.type === 'warning').length > 0 && (
-            <View style={styles.warningBanner}>
-              <Ionicons name="warning" size={20} color={SemanticColors.zoneRed} />
-              <View style={styles.warningContent}>
-                <Text style={styles.warningTitle}>Attention Required</Text>
-                {alerts
-                  .filter(a => a.type === 'warning')
-                  .map((alert) => (
-                    <View key={alert.id} style={styles.alertItem}>
-                      <Text style={styles.alertMessage}>{alert.message}</Text>
-                      <Text style={styles.alertRecommendation}>{alert.recommendation}</Text>
-                    </View>
-                  ))}
-              </View>
-            </View>
-          )}
-          
-          {/* Recommendations Card */}
-          {alerts.filter(a => a.type === 'info').length > 0 && (
-            <View style={styles.recommendationsCard}>
-              <View style={styles.recommendationsHeader}>
-                <Ionicons name="information-circle" size={20} color={SemanticColors.primary} />
-                <Text style={styles.recommendationsTitle}>Recommendations</Text>
-              </View>
-              {alerts
-                .filter(a => a.type === 'info')
-                .map((alert) => (
-                  <View key={alert.id} style={styles.recommendationItem}>
-                    <Text style={styles.recommendationText}>{alert.recommendation}</Text>
-                  </View>
-                ))}
-            </View>
-          )}
-          
-          {/* Return-to-Play Status */}
-          <View style={styles.returnToPlayCard}>
-            <View style={styles.returnToPlayHeader}>
-              <Ionicons 
-                name={returnToPlayStatus.status === 'ready' ? 'checkmark-circle' : returnToPlayStatus.status === 'caution' ? 'alert-circle' : 'close-circle'} 
-                size={24} 
-                color={
-                  returnToPlayStatus.status === 'ready' 
-                    ? SemanticColors.zoneGreen 
-                    : returnToPlayStatus.status === 'caution' 
-                    ? SemanticColors.zoneYellow 
-                    : SemanticColors.zoneRed
-                } 
-              />
-              <Text style={styles.returnToPlayTitle}>Return-to-Play Status</Text>
-            </View>
-            <Text style={styles.returnToPlayMessage}>{returnToPlayStatus.message}</Text>
-            <Text style={styles.returnToPlayDetails}>{returnToPlayStatus.details}</Text>
-          </View>
-          
-          {/* Share Progress Button */}
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={() => setShareModalVisible(true)}
-            activeOpacity={0.7}>
-            <Ionicons name="share-social" size={20} color={SemanticColors.textOnPrimary} />
-            <Text style={styles.shareButtonText}>Share Progress</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Missing Overnight Data */}
         <View style={styles.missingDataSection}>
           <View style={styles.missingDataHeader}>
@@ -570,7 +500,7 @@ export default function AthleteDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -863,8 +793,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   healthScoreHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing['2xl'],
   },
@@ -1144,121 +1072,6 @@ const styles = StyleSheet.create({
   },
   trendNegative: {
     color: SemanticColors.error,
-  },
-  alertsSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing['3xl'],
-  },
-  alertsTitle: {
-    fontSize: 20,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: SemanticColors.primary,
-    marginBottom: Spacing.lg,
-  },
-  warningBanner: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(228, 79, 79, 0.1)',
-    borderWidth: 1,
-    borderColor: SemanticColors.zoneRed,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-    gap: Spacing.md,
-  },
-  warningContent: {
-    flex: 1,
-    gap: Spacing.sm,
-  },
-  warningTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: SemanticColors.zoneRed,
-    marginBottom: Spacing.xs,
-  },
-  alertItem: {
-    marginBottom: Spacing.sm,
-  },
-  alertMessage: {
-    fontSize: Typography.fontSize.base,
-    color: SemanticColors.textPrimary,
-    fontWeight: Typography.fontWeight.medium as any,
-    marginBottom: Spacing.xs,
-  },
-  alertRecommendation: {
-    fontSize: Typography.fontSize.sm,
-    color: SemanticColors.textSecondary,
-    fontStyle: 'italic',
-  },
-  recommendationsCard: {
-    backgroundColor: SemanticColors.background,
-    borderWidth: 1,
-    borderColor: SemanticColors.borderPrimary,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  recommendationsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  recommendationsTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: SemanticColors.primary,
-  },
-  recommendationItem: {
-    marginBottom: Spacing.sm,
-  },
-  recommendationText: {
-    fontSize: Typography.fontSize.base,
-    color: SemanticColors.textPrimary,
-    lineHeight: 20,
-  },
-  returnToPlayCard: {
-    backgroundColor: SemanticColors.background,
-    borderWidth: 1,
-    borderColor: SemanticColors.borderPrimary,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-  },
-  returnToPlayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  returnToPlayTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: SemanticColors.primary,
-  },
-  returnToPlayMessage: {
-    fontSize: Typography.fontSize.base,
-    color: SemanticColors.textPrimary,
-    fontWeight: Typography.fontWeight.medium as any,
-    marginBottom: Spacing.xs,
-  },
-  returnToPlayDetails: {
-    fontSize: Typography.fontSize.sm,
-    color: SemanticColors.textSecondary,
-  },
-  shareButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    backgroundColor: SemanticColors.primary,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    marginTop: Spacing.lg,
-  },
-  shareButtonText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold as any,
-    color: SemanticColors.textOnPrimary,
   },
   modalOverlay: {
     position: 'absolute',

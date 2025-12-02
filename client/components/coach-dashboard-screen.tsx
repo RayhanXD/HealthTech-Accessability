@@ -14,11 +14,11 @@ import {
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { PieChart, BarChart } from 'react-native-gifted-charts';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
-import PatternOverlay from './pattern-overlay';
 
 type FilterStatus = 'all' | 'healthy' | 'injured' | 'suspended';
 
@@ -45,14 +45,11 @@ const athletes: Athlete[] = [
 
 type SortOption = 'name' | 'status' | 'healthScore';
 
-type TimePeriod = 'today' | 'week' | 'month';
-
 export default function CoachDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
   const [sortBy, setSortBy] = useState<SortOption>('name');
   const [sortAscending, setSortAscending] = useState(true);
   const router = useRouter();
@@ -182,8 +179,11 @@ export default function CoachDashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <PatternOverlay patternType="graph" opacity={0.3} />
+    <LinearGradient
+      colors={[SemanticColors.background, '#1a0a2e']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={styles.container}>
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
@@ -274,23 +274,6 @@ export default function CoachDashboardScreen() {
         <View style={styles.teamAnalyticsSection}>
           <View style={styles.analyticsHeader}>
             <Text style={styles.sectionTitle}>Team Analytics</Text>
-            <View style={styles.timePeriodSelector}>
-              <TimePeriodButton
-                label="Today"
-                isSelected={timePeriod === 'today'}
-                onPress={() => setTimePeriod('today')}
-              />
-              <TimePeriodButton
-                label="Week"
-                isSelected={timePeriod === 'week'}
-                onPress={() => setTimePeriod('week')}
-              />
-              <TimePeriodButton
-                label="Month"
-                isSelected={timePeriod === 'month'}
-                onPress={() => setTimePeriod('month')}
-              />
-            </View>
           </View>
           <View style={styles.analyticsGrid}>
             <View style={styles.analyticsCard}>
@@ -305,26 +288,6 @@ export default function CoachDashboardScreen() {
               <Text style={styles.analyticsLabel}>At Risk Athletes</Text>
               <Text style={[styles.analyticsValue, styles.atRiskValue]}>3</Text>
             </View>
-          </View>
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => {
-                setFilterStatus('injured');
-                // Scroll to filter section after a short delay
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({ y: filterSectionY.current - 20, animated: true });
-                }, 100);
-              }}
-              activeOpacity={0.7}>
-              <Text style={styles.quickActionText}>View All Injured</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.quickActionButton, styles.exportButton]}
-              onPress={() => setExportModalVisible(true)}
-              activeOpacity={0.7}>
-              <Text style={[styles.quickActionText, styles.exportButtonText]}>Export Report</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -629,7 +592,7 @@ export default function CoachDashboardScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -738,49 +701,6 @@ function FilterButton({ label, isSelected, onPress }: FilterButtonProps) {
         onPressOut={handlePressOut}
         activeOpacity={1}>
         <Text style={styles.filterButtonText}>{label}</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-interface TimePeriodButtonProps {
-  label: string;
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-function TimePeriodButton({ label, isSelected, onPress }: TimePeriodButtonProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
-  
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
-  };
-  
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
-        style={[styles.timePeriodButton, isSelected && styles.timePeriodButtonSelected]}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={1}>
-        <Text style={[styles.timePeriodButtonText, isSelected && styles.timePeriodButtonTextSelected]}>
-          {label}
-        </Text>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -980,30 +900,6 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semibold as any,
     color: SemanticColors.primary,
   },
-  timePeriodSelector: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  timePeriodButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
-    backgroundColor: SemanticColors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: SemanticColors.borderMuted,
-  },
-  timePeriodButtonSelected: {
-    backgroundColor: SemanticColors.primary,
-    borderColor: SemanticColors.primary,
-  },
-  timePeriodButtonText: {
-    fontSize: Typography.fontSize.sm,
-    color: SemanticColors.textSecondary,
-    fontWeight: Typography.fontWeight.medium as any,
-  },
-  timePeriodButtonTextSelected: {
-    color: SemanticColors.textOnPrimary,
-  },
   analyticsGrid: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -1056,33 +952,6 @@ const styles = StyleSheet.create({
   },
   atRiskValue: {
     color: SemanticColors.error,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.lg,
-  },
-  quickActionButton: {
-    flex: 1,
-    backgroundColor: SemanticColors.primary,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exportButton: {
-    backgroundColor: SemanticColors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: SemanticColors.borderPrimary,
-  },
-  quickActionText: {
-    fontSize: Typography.fontSize.md,
-    color: SemanticColors.textOnPrimary,
-    fontWeight: Typography.fontWeight.semibold as any,
-  },
-  exportButtonText: {
-    color: SemanticColors.textPrimary,
   },
   distributionSection: {
     paddingHorizontal: Spacing.lg,
