@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,11 +31,12 @@ interface CongratulationsScreenProps {
 }
 
 export default function CongratulationsScreen({
-  userName = 'Anjana',
+  userName,
   onContinue,
   continueHref = '/sign-in',
 }: CongratulationsScreenProps) {
   const router = useRouter();
+  const [firstName, setFirstName] = useState<string>('');
 
   // Animation values
   const headingOpacity = useSharedValue(0);
@@ -43,6 +45,27 @@ export default function CongratulationsScreen({
   const iconOpacity = useSharedValue(0);
   const messageOpacity = useSharedValue(0);
   const messageTranslateY = useSharedValue(20);
+
+  // Load firstName from AsyncStorage
+  useEffect(() => {
+    const loadFirstName = async () => {
+      try {
+        const storedFirstName = await AsyncStorage.getItem('firstName');
+        if (storedFirstName) {
+          setFirstName(storedFirstName);
+        } else if (userName) {
+          // Fallback to userName prop if firstName not found
+          setFirstName(userName);
+        }
+      } catch (error) {
+        console.error('Error loading firstName:', error);
+        if (userName) {
+          setFirstName(userName);
+        }
+      }
+    };
+    loadFirstName();
+  }, [userName]);
 
   useEffect(() => {
     // Optimized staggered entrance animations for 120Hz displays
@@ -146,7 +169,7 @@ export default function CongratulationsScreen({
           transform: [{ translateY: headingTranslateY.value }],
         }))]}>
           <Text style={styles.heading}>
-            Congratulations {userName}!
+            Congrats, {firstName || ''}
           </Text>
         </Animated.View>
 

@@ -25,7 +25,7 @@ import AnimatedProgressBar from './animated-progress-bar';
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface CreateAccountScreenProps {
-  onCreateAccount?: (email: string, password: string) => void;
+  onCreateAccount?: (email: string, password: string, firstName?: string, lastName?: string) => void;
   continueHref?: string;
 }
 
@@ -33,11 +33,15 @@ export default function CreateAccountScreen({
   onCreateAccount,
   continueHref = '/add-coach',
 }: CreateAccountScreenProps) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
@@ -88,6 +92,32 @@ export default function CreateAccountScreen({
     return emailRegex.test(email);
   };
 
+  const validateFirstName = (firstNameValue: string) => {
+    if (firstNameValue.length === 0) {
+      setFirstNameError('');
+      return false;
+    }
+    if (firstNameValue.trim().length < 2) {
+      setFirstNameError('First name must be at least 2 characters');
+      return false;
+    }
+    setFirstNameError('');
+    return true;
+  };
+
+  const validateLastName = (lastNameValue: string) => {
+    if (lastNameValue.length === 0) {
+      setLastNameError('');
+      return false;
+    }
+    if (lastNameValue.trim().length < 2) {
+      setLastNameError('Last name must be at least 2 characters');
+      return false;
+    }
+    setLastNameError('');
+    return true;
+  };
+
   const validateEmail = (emailValue: string) => {
     if (emailValue.length === 0) {
       setEmailError('');
@@ -130,6 +160,8 @@ export default function CreateAccountScreen({
 
   const isFormValid = () => {
     return (
+      firstName.trim().length >= 2 &&
+      lastName.trim().length >= 2 &&
       isValidEmail(email) &&
       passwordStrength >= 3 &&
       password === confirmPassword &&
@@ -144,18 +176,28 @@ export default function CreateAccountScreen({
 
   const handleCreateAccount = async () => {
     // Validate all fields
+    const firstNameValid = validateFirstName(firstName);
+    const lastNameValid = validateLastName(lastName);
     const emailValid = validateEmail(email);
     const passwordValid = validatePassword(password);
     const confirmPasswordValid = validateConfirmPassword(confirmPassword);
 
-    if (!emailValid || !passwordValid || !confirmPasswordValid) {
+    if (!firstNameValid || !lastNameValid || !emailValid || !passwordValid || !confirmPasswordValid) {
       return;
     }
 
     if (!isFormValid()) return;
     
+    // Store firstName and lastName in AsyncStorage
+    try {
+      await AsyncStorage.setItem('firstName', firstName.trim());
+      await AsyncStorage.setItem('lastName', lastName.trim());
+    } catch (error) {
+      console.error('Error storing name data:', error);
+    }
+    
     if (onCreateAccount) {
-      onCreateAccount(email, password);
+      onCreateAccount(email, password, firstName.trim(), lastName.trim());
     } else {
       // Check user role and navigate accordingly
       try {
@@ -224,6 +266,56 @@ export default function CreateAccountScreen({
           opacity: formOpacity.value,
           transform: [{ translateY: formTranslateY.value }],
         }))]}>
+
+        {/* First Name Field */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>First Name</Text>
+          <View style={[styles.inputContainer, firstNameError && styles.inputContainerError]}>
+            <TextInput
+              style={styles.input}
+              value={firstName}
+              onChangeText={(text) => {
+                setFirstName(text);
+                if (text.length > 0) {
+                  validateFirstName(text);
+                } else {
+                  setFirstNameError('');
+                }
+              }}
+              onBlur={() => validateFirstName(firstName)}
+              placeholder="Enter your first name"
+              placeholderTextColor={SemanticColors.textTertiary}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+          </View>
+          {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
+        </View>
+
+        {/* Last Name Field */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Last Name</Text>
+          <View style={[styles.inputContainer, lastNameError && styles.inputContainerError]}>
+            <TextInput
+              style={styles.input}
+              value={lastName}
+              onChangeText={(text) => {
+                setLastName(text);
+                if (text.length > 0) {
+                  validateLastName(text);
+                } else {
+                  setLastNameError('');
+                }
+              }}
+              onBlur={() => validateLastName(lastName)}
+              placeholder="Enter your last name"
+              placeholderTextColor={SemanticColors.textTertiary}
+              autoCapitalize="words"
+              autoCorrect={false}
+            />
+          </View>
+          {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
+        </View>
 
         {/* Email Field */}
         <View style={styles.fieldContainer}>

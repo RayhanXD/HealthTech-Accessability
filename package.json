@@ -2,9 +2,16 @@
   "dependencies": {
     "expo": "^54.0.23",
     "react-native": "^0.82.1",
-    "sahha-react-native": "^1.2.8"
+    "sahha-react-native": "^1.2.8",
+    "react": "19.1.0"
   },
   "devDependencies": {
     "@react-native-community/cli": "^20.0.2"
+  },
+  "name": "convergent",
+  "version": "1.0.0",
+  "scripts": {
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   }
 }
