@@ -3,10 +3,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Import routes
 const sahhaRoutes = require('./routes/sahhaRoutes');
+const authRoutes = require('./routes/authRoutes');
+const playerRoutes = require('./routes/playerRoutes');
+const trainerRoutes = require('./routes/trainerRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -41,6 +45,9 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/players', playerRoutes);
+app.use('/api/trainers', trainerRoutes);
 app.use('/api/sahha', sahhaRoutes);
 
 // Root endpoint
@@ -51,6 +58,9 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
+      auth: '/api/auth',
+      players: '/api/players',
+      trainers: '/api/trainers',
       sahha: '/api/sahha'
     },
     documentation: {
@@ -90,6 +100,29 @@ app.use((err, req, res, next) => {
     message: err.message || 'Internal Server Error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
+});
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+    console.log(`📊 Database: ${mongoose.connection.name}`);
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+    process.exit(1);
+  });
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('⚠️ MongoDB disconnected');
 });
 
 // Start server

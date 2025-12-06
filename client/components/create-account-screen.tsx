@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +22,7 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
 import AnimatedProgressBar from './animated-progress-bar';
+import { authAPI } from '@/lib/api/api';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -45,6 +47,7 @@ export default function CreateAccountScreen({
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   // Animation values
@@ -188,31 +191,63 @@ export default function CreateAccountScreen({
 
     if (!isFormValid()) return;
     
-    // Store firstName and lastName in AsyncStorage
+    setIsLoading(true);
+    
     try {
+      // Get user role to determine registration endpoint
+      const userRole = await AsyncStorage.getItem('userRole');
+      const isCoach = userRole === 'coach';
+      
+      // Prepare registration data
+      const registrationData = {
+        email: email.trim(),
+        password: password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      };
+      
+      // Register user based on role
+      let response;
+      if (isCoach) {
+        response = await authAPI.registerTrainer(registrationData);
+      } else {
+        // For players, we might need additional data from health-data screen
+        // For now, just register with basic info
+        const age = await AsyncStorage.getItem('age');
+        const bodyweight = await AsyncStorage.getItem('bodyweight');
+        const height = await AsyncStorage.getItem('height');
+        const sexAtBirth = await AsyncStorage.getItem('sexAtBirth');
+        
+        response = await authAPI.registerPlayer({
+          ...registrationData,
+          age: age ? parseInt(age) : undefined,
+          bodyweight_in_pounds: bodyweight ? parseFloat(bodyweight) : undefined,
+          height_in_inches: height ? parseFloat(height) : undefined,
+          sex_at_birth: sexAtBirth || undefined,
+        });
+      }
+      
+      // Store user data
+      await AsyncStorage.setItem('userRole', isCoach ? 'coach' : 'player');
+      await AsyncStorage.setItem('userId', response.user.id);
       await AsyncStorage.setItem('firstName', firstName.trim());
       await AsyncStorage.setItem('lastName', lastName.trim());
-    } catch (error) {
-      console.error('Error storing name data:', error);
-    }
-    
-    if (onCreateAccount) {
-      onCreateAccount(email, password, firstName.trim(), lastName.trim());
-    } else {
-      // Check user role and navigate accordingly
-      try {
-        const userRole = await AsyncStorage.getItem('userRole');
-        if (userRole === 'coach') {
-          // Skip add-coach step for coaches
-          router.push('/congratulations' as any);
-        } else {
-          // Athletes need to add coach email
-          router.push('/add-coach' as any);
-        }
-      } catch (error) {
-        // If role not found, default to add-coach (athlete flow)
+      
+      // Navigate based on role
+      if (isCoach) {
+        router.push('/congratulations' as any);
+      } else {
         router.push('/add-coach' as any);
       }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      Alert.alert(
+        'Registration Failed',
+        error.message || 'An error occurred during registration. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -444,17 +479,17 @@ export default function CreateAccountScreen({
           <AnimatedTouchableOpacity
             style={[
               styles.createButton,
-              !isFormValid() && styles.createButtonDisabled,
+              (!isFormValid() || isLoading) && styles.createButtonDisabled,
             ]}
             onPress={handleCreateAccount}
             activeOpacity={0.9}
-            disabled={!isFormValid()}>
+            disabled={!isFormValid() || isLoading}>
             <Text
               style={[
                 styles.createButtonText,
-                !isFormValid() && styles.createButtonTextDisabled,
+                (!isFormValid() || isLoading) && styles.createButtonTextDisabled,
               ]}>
-              Create Account
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Text>
           </AnimatedTouchableOpacity>
         </View>

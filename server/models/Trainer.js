@@ -5,11 +5,20 @@ const bcrypt = require('bcryptjs');
 const trainerSchema = new mongoose.Schema({
   User: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
+    sparse: true, // Allows multiple null values
     trim: true,
     minlength: 3,
     maxlength: 30
+  },
+  Email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
   },
   Password: {
     type: String,
@@ -38,6 +47,7 @@ const trainerSchema = new mongoose.Schema({
 
 // Index for better query performance
 trainerSchema.index({ User: 1 });
+trainerSchema.index({ Email: 1 });
 trainerSchema.index({ fName: 1, lname: 1 });
 
 // Pre-save middleware to hash password

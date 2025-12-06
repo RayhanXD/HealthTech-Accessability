@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,6 +23,7 @@ import Animated, {
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
+import { authAPI } from '@/lib/api/api';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -40,6 +42,7 @@ export default function SignInScreen({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   // Animation values
@@ -85,21 +88,63 @@ export default function SignInScreen({
   const handleLogin = async () => {
     if (!isFormValid()) return;
     
-    if (onLogin) {
-      onLogin(email, password);
-    } else {
-      // Check user role and navigate to appropriate dashboard
+    setIsLoading(true);
+    
+    try {
+      if (onLogin) {
+        onLogin(email, password);
+        return;
+      }
+      
+      // Try to login - first try player, then trainer
+      let response;
+      let role = 'player';
+      
       try {
-        const userRole = await AsyncStorage.getItem('userRole');
-        if (userRole === 'coach') {
-          router.push('/coach-dashboard' as any);
+        response = await authAPI.login({
+          email: email.trim(),
+          password: password,
+          role: 'player'
+        });
+      } catch (playerError: any) {
+        // If player login fails, try trainer
+        if (playerError.message.includes('Invalid credentials')) {
+          try {
+            response = await authAPI.login({
+              email: email.trim(),
+              password: password,
+              role: 'trainer'
+            });
+            role = 'trainer';
+          } catch (trainerError: any) {
+            throw new Error('Invalid email or password');
+          }
         } else {
-          router.push('/dashboard' as any);
+          throw playerError;
         }
-      } catch (error) {
-        // If role not found, default to athlete dashboard
+      }
+      
+      // Store user data
+      await AsyncStorage.setItem('userRole', role);
+      await AsyncStorage.setItem('userId', response.user.id);
+      await AsyncStorage.setItem('firstName', response.user.firstName);
+      await AsyncStorage.setItem('lastName', response.user.lastName);
+      
+      // Navigate to appropriate dashboard
+      if (role === 'coach' || role === 'trainer') {
+        router.push('/coach-dashboard' as any);
+      } else {
         router.push('/dashboard' as any);
       }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert(
+        'Login Failed',
+        error.message || 'Invalid email or password. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,17 +270,17 @@ export default function SignInScreen({
           <AnimatedTouchableOpacity
             style={[
               styles.loginButton,
-              !isFormValid() && styles.loginButtonDisabled,
+              (!isFormValid() || isLoading) && styles.loginButtonDisabled,
             ]}
             onPress={handleLogin}
             activeOpacity={0.9}
-            disabled={!isFormValid()}>
+            disabled={!isFormValid() || isLoading}>
             <Text
               style={[
                 styles.loginButtonText,
-                !isFormValid() && styles.loginButtonTextDisabled,
+                (!isFormValid() || isLoading) && styles.loginButtonTextDisabled,
               ]}>
-              Sign in
+              {isLoading ? 'Signing in...' : 'Sign in'}
             </Text>
           </AnimatedTouchableOpacity>
         </View>
