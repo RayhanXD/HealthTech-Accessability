@@ -12,6 +12,6 @@
   "version": "1.0.0",
   "scripts": {
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios --device \"iPhone 17 Pro Max\""
   }
 }
