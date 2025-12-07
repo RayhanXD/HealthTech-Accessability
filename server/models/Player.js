@@ -179,25 +179,19 @@ const playerSchema = new mongoose.Schema({
   },
   Age: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 120
+    required: false
   },
   Bodyweight_in_pounds: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 1000
+    required: false
   },
   Height_in_inches: {
     type: Number,
-    required: true,
-    min: 1,
-    max: 120
+    required: false
   },
   SexAtBirth: {
     type: String,
-    required: true,
+    required: false,
     enum: ['Male', 'Female', 'Other']
   },
   sahhaProfileId: {

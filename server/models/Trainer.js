@@ -46,7 +46,7 @@ const trainerSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-trainerSchema.index({ User: 1 });
+trainerSchema.index({ User: 1 }, { sparse: true }); // Sparse index allows multiple null values
 trainerSchema.index({ Email: 1 });
 trainerSchema.index({ fName: 1, lname: 1 });
 
