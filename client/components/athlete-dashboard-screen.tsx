@@ -20,7 +20,12 @@ import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '
 import SettingsModal from './settings-modal';
 import { useSahha } from '@/lib/sahha/useSahha';
 
-export default function AthleteDashboardScreen() {
+interface AthleteDashboardScreenProps {
+  playerName?: string; // Optional: for coach view mode
+  isCoachView?: boolean; // Optional: indicates if this is being viewed by a coach
+}
+
+export default function AthleteDashboardScreen({ playerName, isCoachView = false }: AthleteDashboardScreenProps = {}) {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [healthScoreDetailVisible, setHealthScoreDetailVisible] = useState(false);
@@ -173,10 +178,12 @@ export default function AthleteDashboardScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}>
-      <SettingsModal
-        visible={settingsVisible}
-        onClose={() => setSettingsVisible(false)}
-      />
+      {!isCoachView && (
+        <SettingsModal
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
+      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -188,10 +195,28 @@ export default function AthleteDashboardScreen() {
         {/* Top Navigation Bar */}
         <View style={styles.navBar}>
           <View style={styles.navIcons}>
-            <TouchableOpacity
-              onPress={() => setSettingsVisible(!settingsVisible)}
-              style={styles.iconButton}
-              activeOpacity={0.7}>
+            {isCoachView ? (
+              <TouchableOpacity
+                onPress={handleBack}
+                style={styles.iconButton}
+                activeOpacity={0.7}>
+                <View style={styles.iconContainer}>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M15 18L9 12L15 6"
+                      stroke={BrandColors.white}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setSettingsVisible(!settingsVisible)}
+                style={styles.iconButton}
+                activeOpacity={0.7}>
               <View style={styles.iconContainer}>
                 {/* Hamburger icon */}
                 <Animated.View
@@ -252,9 +277,12 @@ export default function AthleteDashboardScreen() {
                   </Svg>
                 </Animated.View>
               </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.navTitle}>Welcome, Athlete</Text>
+          <Text style={[styles.navTitle, isCoachView && styles.navTitleCoachView]}>
+            {isCoachView && playerName ? playerName : 'Welcome, Athlete'}
+          </Text>
           <View style={styles.navIcons} />
         </View>
 
@@ -761,6 +789,10 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: Typography.fontWeight.semibold as any,
     textAlign: 'center',
+  },
+  navTitleCoachView: {
+    color: SemanticColors.textPrimary,
+    textAlign: 'left',
   },
   navIcons: {
     flexDirection: 'row',
