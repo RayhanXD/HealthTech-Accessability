@@ -217,7 +217,6 @@ const playerSchema = new mongoose.Schema({
 // Index for better query performance
 // Note: Username and Email indexes are automatically created by unique: true
 playerSchema.index({ fName: 1, Lname: 1 });
-playerSchema.index({ Email: 1 });
 
 // Pre-save middleware to hash password
 playerSchema.pre('save', async function(next) {
