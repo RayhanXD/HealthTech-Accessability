@@ -437,7 +437,7 @@ syntra/
 
 ```bash
 # Clone repository
-git clone https://github.com/RayhanXD/HealthTech-Accessability.git
+git clone -b dev https://github.com/RayhanXD/HealthTech-Accessability.git
 cd HealthTech-Accessability
 
 # Install and run the mobile client
