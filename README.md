@@ -214,26 +214,21 @@ The **Overall Health Score (AHS)** is the primary metric displayed on the athlet
   - Yellow: 60-79 (caution)
   - Red: 0-59 (atRisk)
 
-### Additional Information Shown
-- **Recovery Timeline Estimate**: Estimated days until full recovery
-- **Last Updated**: Timestamp of last data sync
-- **Trend Indicator**: Shows improvement or decline (when available)
-
 ### Data Source
-The AHS is derived from Sahha API health scores, which analyze:
+The AHS is derived from health scores, which analyze:
 - Activity patterns
 - Sleep quality and duration
 - Heart rate metrics (RHR, HRV, HR Recovery)
 - Recovery indicators
 
-## Health Scores from Sahha API
+## Health Scores
 
-The following scores are provided by the Sahha API and stored in the player's Insights:
+The following scores are stored in the player's Insights:
 
 ### Activity Score
 Measures overall physical activity levels by evaluating daily movement patterns.
 
-**Data Source**: Sahha API analysis of:
+**Data Source**:
 - Steps (from smartphone or wearable)
 - Active hours/duration
 - Active calories burned
@@ -243,7 +238,7 @@ Measures overall physical activity levels by evaluating daily movement patterns.
 ### Sleep Score
 Evaluates sleep quality and quantity by analyzing rest patterns and their impact on recovery.
 
-**Data Source**: Sahha API analysis of:
+**Data Source**:
 - Sleep duration
 - Sleep regularity/consistency
 - Sleep continuity (uninterrupted periods)
@@ -254,7 +249,7 @@ Evaluates sleep quality and quantity by analyzing rest patterns and their impact
 ### Readiness Score
 Indicates preparedness to face daily challenges based on recovery from physical strain.
 
-**Data Source**: Sahha API analysis of:
+**Data Source**:
 - Sleep duration and quality
 - Physical recovery indicators (deep sleep)
 - Mental recovery indicators (REM sleep)
