@@ -38,10 +38,11 @@ const registerPlayer = async (req, res) => {
       });
     }
 
-    // Check if player already exists
-    const normalizedEmail = email.toLowerCase().trim();
+    // Normalize email (trim and lowercase)
+    const normalizedEmail = email.trim().toLowerCase();
     console.log('Checking for existing player with email:', normalizedEmail);
-    
+
+    // Check if email already exists in Player collection
     const existingPlayer = await Player.findOne({ Email: normalizedEmail });
     if (existingPlayer) {
       console.log('Existing player found:', existingPlayer.Email, 'ID:', existingPlayer._id);
@@ -52,6 +53,15 @@ const registerPlayer = async (req, res) => {
     }
     
     console.log('No existing player found for email:', normalizedEmail, '- proceeding with registration');
+
+    // Check if email already exists in Trainer collection (emails should be unique across both)
+    const existingTrainer = await Trainer.findOne({ Email: normalizedEmail });
+    if (existingTrainer) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists (as a trainer). Please use a different email or login instead.'
+      });
+    }
 
     // Create player
     const playerData = {
@@ -151,18 +161,43 @@ const registerPlayer = async (req, res) => {
     console.error('Error details:', {
       name: error.name,
       code: error.code,
+      keyPattern: error.keyPattern,
+      keyValue: error.keyValue,
       message: error.message,
       stack: error.stack
     });
     
     // If it's a duplicate key error (MongoDB unique constraint violation)
     if (error.code === 11000) {
-      // Extract the field that caused the duplicate
-      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'email';
-      console.log('Duplicate key error on field:', duplicateField);
+      // MongoDB duplicate key error - check which field caused it
+      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'unknown';
+      const duplicateValue = error.keyValue ? error.keyValue[duplicateField] : 'unknown';
+      console.error('Duplicate key error on field:', duplicateField);
+      console.error('Duplicate key value:', duplicateValue);
+      
+      // Double-check if it actually exists (in case of index corruption)
+      if (duplicateField === 'Email') {
+        const checkPlayer = await Player.findOne({ Email: duplicateValue });
+        const checkTrainer = await Trainer.findOne({ Email: duplicateValue });
+        
+        if (checkPlayer || checkTrainer) {
+          return res.status(400).json({
+            success: false,
+            message: 'An account with this email already exists. Please use a different email or login instead.'
+          });
+        } else {
+          // Index corruption - email doesn't actually exist but index thinks it does
+          console.error('⚠️  Database index issue detected - email not found but index reports duplicate');
+          return res.status(500).json({
+            success: false,
+            message: 'Database error: Please contact support or try again later. The email may appear to be in use due to a database issue.'
+          });
+        }
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'Player with this email already exists'
+        message: `A player with this ${duplicateField} already exists`
       });
     }
     
@@ -197,8 +232,11 @@ const registerTrainer = async (req, res) => {
       });
     }
 
-    // Check if trainer already exists
-    const existingTrainer = await Trainer.findOne({ Email: email.toLowerCase() });
+    // Normalize email (trim and lowercase)
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check if email already exists in Trainer collection
+    const existingTrainer = await Trainer.findOne({ Email: normalizedEmail });
     if (existingTrainer) {
       return res.status(400).json({
         success: false,
@@ -206,9 +244,18 @@ const registerTrainer = async (req, res) => {
       });
     }
 
+    // Check if email already exists in Player collection (emails should be unique across both)
+    const existingPlayer = await Player.findOne({ Email: normalizedEmail });
+    if (existingPlayer) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists (as a player). Please use a different email or login instead.'
+      });
+    }
+
     // Create trainer
     const trainer = new Trainer({
-      Email: email.toLowerCase(),
+      Email: normalizedEmail,
       Password: password,
       fName: firstName,
       lname: lastName,
@@ -234,10 +281,41 @@ const registerTrainer = async (req, res) => {
     });
   } catch (error) {
     console.error('Error registering trainer:', error);
+    console.error('Error details:', {
+      code: error.code,
+      keyPattern: error.keyPattern,
+      keyValue: error.keyValue,
+      message: error.message
+    });
+    
     if (error.code === 11000) {
+      // MongoDB duplicate key error - check which field caused it
+      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'unknown';
+      const duplicateValue = error.keyValue ? error.keyValue[duplicateField] : 'unknown';
+      
+      // Double-check if it actually exists (in case of index corruption)
+      if (duplicateField === 'Email') {
+        const checkTrainer = await Trainer.findOne({ Email: duplicateValue });
+        const checkPlayer = await Player.findOne({ Email: duplicateValue });
+        
+        if (checkTrainer || checkPlayer) {
+          return res.status(400).json({
+            success: false,
+            message: 'An account with this email already exists. Please use a different email or login instead.'
+          });
+        } else {
+          // Index corruption - email doesn't actually exist but index thinks it does
+          console.error('⚠️  Database index issue detected - email not found but index reports duplicate');
+          return res.status(500).json({
+            success: false,
+            message: 'Database error: Please contact support or try again later. The email may appear to be in use due to a database issue.'
+          });
+        }
+      }
+      
       return res.status(400).json({
         success: false,
-        message: 'Trainer with this email already exists'
+        message: `A trainer with this ${duplicateField} already exists`
       });
     }
     res.status(500).json({
