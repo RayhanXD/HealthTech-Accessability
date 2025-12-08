@@ -31,16 +31,16 @@ interface Athlete {
 }
 
 const athletes: Athlete[] = [
-  { id: 1, name: 'Name 1', status: 'Healthy', healthScore: 85, lastSync: '2 hours ago' },
-  { id: 2, name: 'Name 2', status: 'Injured', healthScore: 45, lastSync: '1 day ago' },
-  { id: 3, name: 'Name 3', status: 'Suspended', healthScore: 60, lastSync: '3 hours ago' },
-  { id: 4, name: 'Name 4', status: 'Healthy', healthScore: 92, lastSync: 'Just now' },
-  { id: 5, name: 'Name 5', status: 'Healthy', healthScore: 78, lastSync: '5 hours ago' },
-  { id: 6, name: 'Name 6', status: 'Healthy', healthScore: 88, lastSync: '1 hour ago' },
-  { id: 7, name: 'Name 7', status: 'Injured', healthScore: 52, lastSync: '2 days ago' },
-  { id: 8, name: 'Name 8', status: 'Healthy', healthScore: 90, lastSync: '30 mins ago' },
-  { id: 9, name: 'Name 9', status: 'Healthy', healthScore: 75, lastSync: '4 hours ago' },
-  { id: 10, name: 'Name 10', status: 'Healthy', healthScore: 82, lastSync: '3 hours ago' },
+  { id: 1, name: 'Athlete 1', status: 'Healthy', healthScore: 85, lastSync: '2 hours ago' },
+  { id: 2, name: 'Athlete 2', status: 'Injured', healthScore: 45, lastSync: '1 day ago' },
+  { id: 3, name: 'Athlete 3', status: 'Suspended', healthScore: 60, lastSync: '3 hours ago' },
+  { id: 4, name: 'Athlete 4', status: 'Healthy', healthScore: 92, lastSync: 'Just now' },
+  { id: 5, name: 'Athlete 5', status: 'Healthy', healthScore: 78, lastSync: '5 hours ago' },
+  { id: 6, name: 'Athlete 6', status: 'Healthy', healthScore: 88, lastSync: '1 hour ago' },
+  { id: 7, name: 'Athlete 7', status: 'Injured', healthScore: 52, lastSync: '2 days ago' },
+  { id: 8, name: 'Athlete 8', status: 'Healthy', healthScore: 90, lastSync: '30 mins ago' },
+  { id: 9, name: 'Athlete 9', status: 'Healthy', healthScore: 75, lastSync: '4 hours ago' },
+  { id: 10, name: 'Athlete 10', status: 'Healthy', healthScore: 82, lastSync: '3 hours ago' },
 ];
 
 type SortOption = 'name' | 'status' | 'healthScore';
@@ -711,6 +711,7 @@ interface AthleteRowProps {
 }
 
 function AthleteRow({ athlete }: AthleteRowProps) {
+  const router = useRouter();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   
@@ -747,6 +748,16 @@ function AthleteRow({ athlete }: AthleteRowProps) {
       friction: 10,
     }).start();
   };
+
+  const handleAthletePress = () => {
+    router.push({
+      pathname: '/athlete-view',
+      params: {
+        playerId: athlete.id.toString(),
+        playerName: athlete.name,
+      },
+    } as any);
+  };
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -780,6 +791,7 @@ function AthleteRow({ athlete }: AthleteRowProps) {
         activeOpacity={1}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        onPress={handleAthletePress}
         style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
         {/* Status indicator dot */}
         <View style={[styles.statusDot, { backgroundColor: getStatusColor(athlete.status) }]} />
@@ -807,10 +819,7 @@ function AthleteRow({ athlete }: AthleteRowProps) {
       <View style={styles.athleteActions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => {
-            // TODO: Navigate to athlete details
-            console.log(`View details for ${athlete.name}`);
-          }}
+          onPress={handleAthletePress}
           activeOpacity={0.7}>
           <Text style={styles.actionButtonText}>Details</Text>
         </TouchableOpacity>
