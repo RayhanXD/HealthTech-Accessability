@@ -88,7 +88,10 @@ const apiRequest = async (
     }
 
     if (!response.ok) {
-      throw new Error(data.message || `Request failed with status ${response.status}`);
+      // Create error with message from API response
+      const error = new Error(data.message || data.error || `Request failed with status ${response.status}`);
+      (error as any).response = { data, status: response.status };
+      throw error;
     }
 
     return data;
@@ -182,6 +185,115 @@ export const authAPI = {
   logout: async () => {
     await removeToken();
     await AsyncStorage.removeItem('userData');
+  },
+};
+
+// Trainer/Coach API
+export const trainerAPI = {
+  // Find trainer by email
+  findTrainerByEmail: async (email: string) => {
+    try {
+      const response = await apiRequest(`/api/trainers/email/${encodeURIComponent(email)}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error finding trainer by email:', error);
+      throw error;
+    }
+  },
+
+  // Add player to trainer by email
+  addPlayerToTrainerByEmail: async (email: string, playerId: string) => {
+    try {
+      const response = await apiRequest(`/api/trainers/email/${encodeURIComponent(email)}/players`, {
+        method: 'POST',
+        body: JSON.stringify({ playerId }),
+      });
+      return response;
+    } catch (error: any) {
+      console.error('Error adding player to trainer:', error);
+      // Extract error message from response if available
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
+  // Get my players with health data (for current trainer)
+  getMyPlayersWithHealth: async () => {
+    try {
+      // Get trainer ID from userData stored during login
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (!userDataStr) {
+        throw new Error('Trainer ID not found. Please log in again.');
+      }
+      const userData = JSON.parse(userDataStr);
+      const trainerId = userData.id || userData._id;
+      
+      if (!trainerId) {
+        throw new Error('Trainer ID not found. Please log in again.');
+      }
+
+      const response = await apiRequest(`/api/trainers/${trainerId}/players/health`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching players with health data:', error);
+      throw error;
+    }
+  },
+};
+
+// Health Data API
+export const healthAPI = {
+  // Get my health data (for current player)
+  getMyHealthData: async () => {
+    try {
+      const playerId = await AsyncStorage.getItem('playerId');
+      if (!playerId) {
+        throw new Error('Player ID not found. Please log in again.');
+      }
+      const response = await apiRequest(`/api/players/${playerId}/health`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching health data:', error);
+      throw error;
+    }
+  },
+
+  // Get health data for a specific player (for coach view)
+  getPlayerHealthData: async (playerId: string) => {
+    try {
+      const response = await apiRequest(`/api/players/${playerId}/health`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching player health data:', error);
+      throw error;
+    }
+  },
+
+  // Sync health data from Sahha
+  syncHealthData: async () => {
+    try {
+      const playerId = await AsyncStorage.getItem('playerId');
+      if (!playerId) {
+        throw new Error('Player ID not found. Please log in again.');
+      }
+      const response = await apiRequest(`/api/players/${playerId}/sync`, {
+        method: 'POST',
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error syncing health data:', error);
+      throw error;
+    }
   },
 };
 

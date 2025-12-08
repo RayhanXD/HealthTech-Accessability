@@ -20,6 +20,8 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 import { BrandColors, SemanticColors, Spacing, Typography, FuturisticDesign, BorderRadius, ComponentTokens } from '@/constants/theme';
 import AnimatedProgressBar from './animated-progress-bar';
+import { trainerAPI } from '@/lib/api/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -34,6 +36,7 @@ export default function AddCoachScreen({
 }: AddCoachScreenProps) {
   const [coachEmail, setCoachEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   // Animation values
@@ -93,18 +96,58 @@ export default function AddCoachScreen({
     router.back();
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Validate email before proceeding
     const emailValid = validateEmail(coachEmail);
     
     if (!emailValid || !isFormValid()) {
       return;
     }
-    
-    if (onContinue) {
-      onContinue(coachEmail);
-    } else {
-      router.push('/congratulations' as any);
+
+    setIsLoading(true);
+    setEmailError('');
+
+    try {
+      // Get current player ID from AsyncStorage
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        setEmailError('Please log in again');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if coach exists and add player to coach
+      await trainerAPI.addPlayerToTrainerByEmail(coachEmail.trim().toLowerCase(), userId);
+      
+      // Success - proceed to next screen
+      if (onContinue) {
+        onContinue(coachEmail);
+      } else {
+        router.push('/congratulations' as any);
+      }
+    } catch (error: any) {
+      // Handle error - show user-friendly message
+      let errorMessage = 'Failed to add coach. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      // Provide specific error messages
+      if (errorMessage.includes('No coach found') || errorMessage.includes('404') || errorMessage.includes('not found')) {
+        setEmailError('No coach found with this email. Please check the email and try again.');
+      } else if (errorMessage.includes('already assigned') || errorMessage.includes('already')) {
+        setEmailError('You are already assigned to this coach.');
+      } else if (errorMessage.includes('Player not found')) {
+        setEmailError('Account error. Please log in again.');
+      } else {
+        setEmailError(errorMessage);
+      }
+      console.error('Error adding coach:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -197,17 +240,17 @@ export default function AddCoachScreen({
             <AnimatedTouchableOpacity
               style={[
                 styles.continueButton,
-                !isFormValid() && styles.continueButtonDisabled,
+                (!isFormValid() || isLoading) && styles.continueButtonDisabled,
               ]}
               onPress={handleContinue}
               activeOpacity={0.9}
-              disabled={!isFormValid()}>
+              disabled={!isFormValid() || isLoading}>
               <Text
                 style={[
                   styles.continueButtonText,
-                  !isFormValid() && styles.continueButtonTextDisabled,
+                  (!isFormValid() || isLoading) && styles.continueButtonTextDisabled,
                 ]}>
-                Continue
+                {isLoading ? 'Adding...' : 'Continue'}
               </Text>
             </AnimatedTouchableOpacity>
           </View>

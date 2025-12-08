@@ -496,6 +496,113 @@ const addComparisonToPlayer = async (req, res) => {
   }
 };
 
+// @desc    Get player health data (transformed for dashboard)
+// @route   GET /api/players/:id/health
+// @access  Public
+const getPlayerHealthData = async (req, res) => {
+  try {
+    const player = await Player.findById(req.params.id).select('-Password');
+    
+    if (!player) {
+      return res.status(404).json({
+        success: false,
+        message: 'Player not found'
+      });
+    }
+
+    // Sync insights if player has Sahha profile
+    let insights = player.Insights || { Trends: [], Comparisons: [] };
+    
+    if (player.sahhaProfileId) {
+      try {
+        const sahhaService = require('../services/sahhaService');
+        // Sync insights from Sahha
+        const syncedInsights = await sahhaService.syncInsights(player.sahhaProfileId);
+        if (syncedInsights) {
+          player.Insights = syncedInsights;
+          await player.save();
+          insights = syncedInsights;
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not sync Sahha insights:', error.message);
+        // Continue with existing insights
+      }
+    }
+
+    // Transform insights to health data format
+    const healthDataTransformService = require('../services/healthDataTransformService');
+    const healthData = healthDataTransformService.transformToHealthData(insights);
+
+    res.json({
+      success: true,
+      data: healthData
+    });
+  } catch (error) {
+    console.error('Error fetching player health data:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid player ID format'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching health data',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Sync player health data from Sahha
+// @route   POST /api/players/:id/sync
+// @access  Public
+const syncPlayerHealthData = async (req, res) => {
+  try {
+    const player = await Player.findById(req.params.id).select('-Password');
+    
+    if (!player) {
+      return res.status(404).json({
+        success: false,
+        message: 'Player not found'
+      });
+    }
+
+    if (!player.sahhaProfileId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player does not have a Sahha profile'
+      });
+    }
+
+    const sahhaService = require('../services/sahhaService');
+    const insights = await sahhaService.syncInsights(player.sahhaProfileId);
+    
+    if (insights) {
+      player.Insights = insights;
+      await player.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Health data synced successfully',
+      data: insights
+    });
+  } catch (error) {
+    console.error('Error syncing player health data:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid player ID format'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server error while syncing health data',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllPlayers,
   getPlayerById,
@@ -504,5 +611,7 @@ module.exports = {
   deletePlayer,
   updatePlayerInsights,
   addTrendToPlayer,
-  addComparisonToPlayer
+  addComparisonToPlayer,
+  getPlayerHealthData,
+  syncPlayerHealthData
 };

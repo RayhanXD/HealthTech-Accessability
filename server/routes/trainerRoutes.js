@@ -8,7 +8,10 @@ const {
   deleteTrainer,
   addPlayerToTrainer,
   removePlayerFromTrainer,
-  getTrainerPlayers
+  getTrainerPlayers,
+  getTrainerPlayersWithHealth,
+  getTrainerByEmail,
+  addPlayerToTrainerByEmail
 } = require('../controllers/trainerController');
 
 // @route   GET /api/trainers
@@ -16,6 +19,17 @@ const {
 // @access  Public
 // Query parameters: page, limit, search
 router.get('/', getAllTrainers);
+
+// @route   GET /api/trainers/email/:email
+// @desc    Find trainer by email
+// @access  Public
+router.get('/email/:email', getTrainerByEmail);
+
+// @route   POST /api/trainers/email/:email/players
+// @desc    Add player to trainer by email
+// @access  Public
+// Body: { playerId: "player_id_here" }
+router.post('/email/:email/players', addPlayerToTrainerByEmail);
 
 // @route   GET /api/trainers/:id
 // @desc    Get single trainer by ID with populated players
@@ -36,6 +50,11 @@ router.put('/:id', updateTrainer);
 // @desc    Delete trainer
 // @access  Public
 router.delete('/:id', deleteTrainer);
+
+// @route   GET /api/trainers/:id/players/health
+// @desc    Get all players assigned to a trainer with health data
+// @access  Public
+router.get('/:id/players/health', getTrainerPlayersWithHealth);
 
 // @route   GET /api/trainers/:id/players
 // @desc    Get all players assigned to a trainer

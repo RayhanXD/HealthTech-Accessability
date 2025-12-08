@@ -19,29 +19,18 @@ import Svg, { Path } from 'react-native-svg';
 import { PieChart, BarChart } from 'react-native-gifted-charts';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { trainerAPI } from '@/lib/api/api';
 
 type FilterStatus = 'all' | 'healthy' | 'injured' | 'suspended';
 
 interface Athlete {
-  id: number;
+  id: string;
   name: string;
   status: string;
   healthScore: number;
   lastSync: string; // e.g., "2 hours ago", "Just now"
 }
-
-const athletes: Athlete[] = [
-  { id: 1, name: 'Athlete 1', status: 'Healthy', healthScore: 85, lastSync: '2 hours ago' },
-  { id: 2, name: 'Athlete 2', status: 'Injured', healthScore: 45, lastSync: '1 day ago' },
-  { id: 3, name: 'Athlete 3', status: 'Suspended', healthScore: 60, lastSync: '3 hours ago' },
-  { id: 4, name: 'Athlete 4', status: 'Healthy', healthScore: 92, lastSync: 'Just now' },
-  { id: 5, name: 'Athlete 5', status: 'Healthy', healthScore: 78, lastSync: '5 hours ago' },
-  { id: 6, name: 'Athlete 6', status: 'Healthy', healthScore: 88, lastSync: '1 hour ago' },
-  { id: 7, name: 'Athlete 7', status: 'Injured', healthScore: 52, lastSync: '2 days ago' },
-  { id: 8, name: 'Athlete 8', status: 'Healthy', healthScore: 90, lastSync: '30 mins ago' },
-  { id: 9, name: 'Athlete 9', status: 'Healthy', healthScore: 75, lastSync: '4 hours ago' },
-  { id: 10, name: 'Athlete 10', status: 'Healthy', healthScore: 82, lastSync: '3 hours ago' },
-];
 
 type SortOption = 'name' | 'status' | 'healthScore';
 
@@ -56,6 +45,50 @@ export default function CoachDashboardScreen() {
   const iconAnim = useRef(new Animated.Value(0)).current; // 0 = hamburger, 1 = X
   const scrollViewRef = useRef<ScrollView>(null);
   const filterSectionY = useRef<number>(0);
+
+  // Real data state
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [teamStatistics, setTeamStatistics] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch players with health data
+  useEffect(() => {
+    const fetchPlayersData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await trainerAPI.getMyPlayersWithHealth();
+        
+        setAthletes(data.players || []);
+        setTeamStatistics(data.teamStatistics || null);
+      } catch (err: any) {
+        console.error('Error fetching players data:', err);
+        setError(err.message || 'Failed to load team data');
+        // Set empty defaults
+        setAthletes([]);
+        setTeamStatistics({
+          totalAthletes: 0,
+          avgPerformance: 0,
+          atRiskCount: 0,
+          teamAverage: 0,
+          previousAverage: null,
+          averageChange: 0,
+          barChartData: [],
+          statusDistribution: {
+            healthy: 0,
+            injured: 0,
+            suspended: 0,
+          },
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlayersData();
+  }, []);
   
   const handleExport = (format: 'pdf' | 'csv' | 'share') => {
     setExportModalVisible(false);
@@ -88,30 +121,28 @@ export default function CoachDashboardScreen() {
 
   // Calculate pie chart data from athletes
   const pieChartData = useMemo(() => {
-    const statusCounts = athletes.reduce((acc, athlete) => {
-      const status = athlete.status.toLowerCase();
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    if (!teamStatistics) {
+      return [];
+    }
 
     return [
       {
-        value: statusCounts.healthy || 0,
+        value: teamStatistics.statusDistribution?.healthy || 0,
         color: BrandColors.purple, // Light purple
         text: 'Healthy',
       },
       {
-        value: statusCounts.injured || 0,
+        value: teamStatistics.statusDistribution?.injured || 0,
         color: BrandColors.purpleDark, // Darker purple
         text: 'Injured',
       },
       {
-        value: statusCounts.suspended || 0,
+        value: teamStatistics.statusDistribution?.suspended || 0,
         color: '#6B6B6B', // Medium gray
         text: 'Suspended',
       },
     ].filter(item => item.value > 0);
-  }, []);
+  }, [teamStatistics]);
 
   // Filter and sort athletes
   const filteredAndSortedAthletes = useMemo(() => {
@@ -143,28 +174,23 @@ export default function CoachDashboardScreen() {
     return filtered;
   }, [searchQuery, filterStatus, sortBy, sortAscending]);
 
-  // Bar chart data with metric names
-  const barChartData = [
-    { value: 82, label: 'M1', metricName: 'Resting\nHeart Rate' },
-    { value: 59, label: 'M2', metricName: 'Heart Rate\nVariability' },
-    { value: 10, label: 'M3', metricName: 'Heart Rate\nRecovery' },
-    { value: 61, label: 'M4', metricName: 'Sleep\nQuality' },
-    { value: 48, label: 'M5', metricName: 'Sleep\nDuration' },
-    { value: 73, label: 'M6', metricName: 'Activity\nLevel' },
-    { value: 54, label: 'M7', metricName: 'Overall\nRecovery' },
+  // Bar chart data with metric names - from team statistics
+  const barChartData = teamStatistics?.barChartData || [
+    { value: 0, label: 'M1', metricName: 'Resting\nHeart Rate' },
+    { value: 0, label: 'M2', metricName: 'Heart Rate\nVariability' },
+    { value: 0, label: 'M3', metricName: 'Heart Rate\nRecovery' },
+    { value: 0, label: 'M4', metricName: 'Sleep\nQuality' },
+    { value: 0, label: 'M5', metricName: 'Sleep\nDuration' },
+    { value: 0, label: 'M6', metricName: 'Activity\nLevel' },
+    { value: 0, label: 'M7', metricName: 'Overall\nRecovery' },
   ];
   
-  // Calculate team average
-  const teamAverage = Math.round(
-    barChartData.reduce((sum, item) => sum + item.value, 0) / barChartData.length
-  );
+  // Calculate team average from team statistics
+  const teamAverage = teamStatistics?.teamAverage || 0;
   
-  // Previous period data for comparison
-  const previousPeriodData = [78, 55, 12, 58, 45, 70, 52];
-  const previousAverage = Math.round(
-    previousPeriodData.reduce((sum, val) => sum + val, 0) / previousPeriodData.length
-  );
-  const averageChange = teamAverage - previousAverage;
+  // Previous period data for comparison - from team statistics
+  const previousAverage = teamStatistics?.previousAverage || null;
+  const averageChange = teamStatistics?.averageChange || 0;
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
@@ -270,35 +296,53 @@ export default function CoachDashboardScreen() {
           <View style={styles.navIcons} />
         </View>
 
+        {/* Loading State */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading team data...</Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         {/* Team Analytics */}
-        <View style={styles.teamAnalyticsSection}>
-          <View style={styles.analyticsHeader}>
-            <Text style={styles.sectionTitle}>Team Analytics</Text>
+        {!loading && (
+          <View style={styles.teamAnalyticsSection}>
+            <View style={styles.analyticsHeader}>
+              <Text style={styles.sectionTitle}>Team Analytics</Text>
+            </View>
+            <View style={styles.analyticsGrid}>
+              <View style={styles.analyticsCard}>
+                <Text style={styles.analyticsLabel}>Total Athletes</Text>
+                <Text style={styles.analyticsValue}>{teamStatistics?.totalAthletes || 0}</Text>
+              </View>
+              <View style={styles.analyticsCard}>
+                <Text style={styles.analyticsLabel}>Avg. Performance</Text>
+                <Text style={styles.analyticsValue}>{teamStatistics?.avgPerformance || 0}%</Text>
+              </View>
+              <View style={[styles.analyticsCard, styles.atRiskCard]}>
+                <Text style={styles.analyticsLabel}>At Risk Athletes</Text>
+                <Text style={[styles.analyticsValue, styles.atRiskValue]}>{teamStatistics?.atRiskCount || 0}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.analyticsGrid}>
-            <View style={styles.analyticsCard}>
-              <Text style={styles.analyticsLabel}>Total Athletes</Text>
-              <Text style={styles.analyticsValue}>10</Text>
-            </View>
-            <View style={styles.analyticsCard}>
-              <Text style={styles.analyticsLabel}>Avg. Performance</Text>
-              <Text style={styles.analyticsValue}>75%</Text>
-            </View>
-            <View style={[styles.analyticsCard, styles.atRiskCard]}>
-              <Text style={styles.analyticsLabel}>At Risk Athletes</Text>
-              <Text style={[styles.analyticsValue, styles.atRiskValue]}>3</Text>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* Athlete Status Distribution */}
-        <View style={styles.distributionSection}>
-          <View style={styles.distributionCard}>
-            <Text style={styles.distributionTitle}>Athlete Status Distribution</Text>
-            <Text style={styles.distributionSubtitle}>Count</Text>
-            <Text style={styles.distributionHint}>Click segments or legend to filter players</Text>
-            <View style={styles.pieChartContainer}>
-              <PieChart
+        {!loading && (
+          <View style={styles.distributionSection}>
+            <View style={styles.distributionCard}>
+              <Text style={styles.distributionTitle}>Athlete Status Distribution</Text>
+              <Text style={styles.distributionSubtitle}>Count</Text>
+              <Text style={styles.distributionHint}>Click segments or legend to filter players</Text>
+              {pieChartData.length > 0 ? (
+                <View style={styles.pieChartContainer}>
+                  <PieChart
                 data={pieChartData.map((item) => ({
                   ...item,
                   onPress: () => {
@@ -335,8 +379,13 @@ export default function CoachDashboardScreen() {
                   );
                 }}
               />
-            </View>
-            <View style={styles.pieChartLegend}>
+                </View>
+              ) : (
+                <View style={styles.emptyChartContainer}>
+                  <Text style={styles.emptyChartText}>No players with status data</Text>
+                </View>
+              )}
+              <View style={styles.pieChartLegend}>
               {pieChartData.map((item, index) => {
                 const statusMap: Record<string, FilterStatus> = {
                   'Healthy': 'healthy',
@@ -366,35 +415,40 @@ export default function CoachDashboardScreen() {
             <Text style={styles.distributionLabel}>Status</Text>
           </View>
         </View>
+        )}
 
         {/* Team Performance Metrics */}
-        <View style={styles.performanceSection}>
-          <View style={styles.performanceCard}>
-            <View style={styles.performanceHeader}>
-              <View>
-                <Text style={styles.performanceTitle}>Team Performance Metrics</Text>
-                <Text style={styles.performanceSubtitle}>Scores</Text>
-              </View>
-              <View style={styles.performanceComparison}>
-                <Text style={styles.comparisonLabel}>Avg: {teamAverage}%</Text>
-                <View style={styles.comparisonChange}>
-                  <Text style={[
-                    styles.comparisonArrow,
-                    averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
-                  ]}>
-                    {averageChange >= 0 ? '↑' : '↓'}
-                  </Text>
-                  <Text style={[
-                    styles.comparisonValue,
-                    averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
-                  ]}>
-                    {Math.abs(averageChange)}% vs last period
-                  </Text>
+        {!loading && (
+          <View style={styles.performanceSection}>
+            <View style={styles.performanceCard}>
+              <View style={styles.performanceHeader}>
+                <View>
+                  <Text style={styles.performanceTitle}>Team Performance Metrics</Text>
+                  <Text style={styles.performanceSubtitle}>Scores</Text>
+                </View>
+                <View style={styles.performanceComparison}>
+                  <Text style={styles.comparisonLabel}>Avg: {teamAverage}%</Text>
+                  {previousAverage !== null && (
+                    <View style={styles.comparisonChange}>
+                      <Text style={[
+                        styles.comparisonArrow,
+                        averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
+                      ]}>
+                        {averageChange >= 0 ? '↑' : '↓'}
+                      </Text>
+                      <Text style={[
+                        styles.comparisonValue,
+                        averageChange >= 0 ? styles.comparisonPositive : styles.comparisonNegative
+                      ]}>
+                        {Math.abs(averageChange)}% vs last period
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
-            </View>
-            <View style={styles.barChartContainer}>
-              <BarChart
+              {barChartData.some(item => item.value > 0) ? (
+                <View style={styles.barChartContainer}>
+                  <BarChart
                 data={barChartData}
                 width={screenWidth - 72}
                 height={180}
@@ -438,8 +492,13 @@ export default function CoachDashboardScreen() {
                   console.log(`Pressed ${barChartData[index].metricName}: ${item.value}%`);
                 }}
               />
-            </View>
-            <View style={styles.metricLabels}>
+                </View>
+              ) : (
+                <View style={styles.emptyChartContainer}>
+                  <Text style={styles.emptyChartText}>No metric data available yet</Text>
+                </View>
+              )}
+              <View style={styles.metricLabels}>
               {/* Top row - first 3 metrics */}
               <View style={styles.metricRow}>
                 {barChartData.slice(0, 3).map((item, index) => (
@@ -479,6 +538,7 @@ export default function CoachDashboardScreen() {
             </View>
           </View>
         </View>
+        )}
 
         {/* Search Athletes */}
         <View style={styles.searchSection}>
@@ -1382,5 +1442,38 @@ const styles = StyleSheet.create({
   exportOptionDescription: {
     fontSize: Typography.fontSize.sm,
     color: SemanticColors.textSecondary,
+  },
+  loadingContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  loadingText: {
+    color: SemanticColors.textSecondary,
+    fontSize: Typography.fontSize.base,
+  },
+  errorContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  errorText: {
+    color: SemanticColors.error,
+    fontSize: Typography.fontSize.base,
+    textAlign: 'center',
+  },
+  emptyChartContainer: {
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: SemanticColors.borderSecondary,
+    borderRadius: BorderRadius.md,
+  },
+  emptyChartText: {
+    color: SemanticColors.textTertiary,
+    fontSize: Typography.fontSize.sm,
   },
 });

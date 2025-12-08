@@ -8,7 +8,9 @@ const {
   deletePlayer,
   updatePlayerInsights,
   addTrendToPlayer,
-  addComparisonToPlayer
+  addComparisonToPlayer,
+  getPlayerHealthData,
+  syncPlayerHealthData
 } = require('../controllers/playerController');
 
 // @route   GET /api/players
@@ -17,25 +19,23 @@ const {
 // Query parameters: page, limit, search, sex, minAge, maxAge
 router.get('/', getAllPlayers);
 
-// @route   GET /api/players/:id
-// @desc    Get single player by ID
-// @access  Public
-router.get('/:id', getPlayerById);
-
 // @route   POST /api/players
 // @desc    Create new player
 // @access  Public
 router.post('/', createPlayer);
 
-// @route   PUT /api/players/:id
-// @desc    Update player
-// @access  Public
-router.put('/:id', updatePlayer);
+// IMPORTANT: More specific routes must be defined BEFORE generic :id routes
+// Otherwise Express will match /:id first and never reach these routes
 
-// @route   DELETE /api/players/:id
-// @desc    Delete player
+// @route   GET /api/players/:id/health
+// @desc    Get player health data (transformed for dashboard)
 // @access  Public
-router.delete('/:id', deletePlayer);
+router.get('/:id/health', getPlayerHealthData);
+
+// @route   POST /api/players/:id/sync
+// @desc    Sync player health data from Sahha
+// @access  Public
+router.post('/:id/sync', syncPlayerHealthData);
 
 // @route   PUT /api/players/:id/insights
 // @desc    Update player insights (trends and comparisons)
@@ -51,5 +51,20 @@ router.post('/:id/trends', addTrendToPlayer);
 // @desc    Add comparison to player
 // @access  Public
 router.post('/:id/comparisons', addComparisonToPlayer);
+
+// @route   GET /api/players/:id
+// @desc    Get single player by ID
+// @access  Public
+router.get('/:id', getPlayerById);
+
+// @route   PUT /api/players/:id
+// @desc    Update player
+// @access  Public
+router.put('/:id', updatePlayer);
+
+// @route   DELETE /api/players/:id
+// @desc    Delete player
+// @access  Public
+router.delete('/:id', deletePlayer);
 
 module.exports = router;

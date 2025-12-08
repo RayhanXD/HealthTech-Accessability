@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BrandColors, SemanticColors, Spacing, Typography, BorderRadius } from '@/constants/theme';
 import SettingsModal from './settings-modal';
 import { useSahha } from '@/lib/sahha/useSahha';
+import { healthAPI } from '@/lib/api/api';
 
 interface AthleteDashboardScreenProps {
   playerName?: string; // Optional: for coach view mode
@@ -65,42 +66,87 @@ export default function AthleteDashboardScreen({ playerName, isCoachView = false
     )).start();
   }, []);
   
-  // Mock data - replace with real data
-  const healthScore = 78;
-  const healthScoreTrend = 5; // +5% from last week
-  const recoveryDaysEstimate = 5;
-  const lastUpdated = '2 hours ago';
-  const healthStatus = healthScore >= 80 ? 'good' : healthScore >= 60 ? 'caution' : 'atRisk';
-  
-  // Critical health metrics data
-  const healthMetrics = {
-    restingHeartRate: { value: 62, unit: 'bpm', trend: -3, status: 'good' },
-    heartRateVariability: { value: 45, unit: 'ms', trend: 5, status: 'good' },
-    sleepQuality: { hours: 7.5, qualityScore: 82, trend: 8, status: 'good' },
-    activityLevel: { steps: 8420, activeMinutes: 45, trend: 12, status: 'good' },
-    heartRateRecovery: { value: 25, unit: 'bpm', trend: -2, status: 'caution' },
+  // Health data state
+  const [healthData, setHealthData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rawTrendData, setRawTrendData] = useState<any[]>([]);
+
+  // Fetch health data
+  useEffect(() => {
+    const fetchHealthData = async () => {
+      if (!playerId && !isCoachView) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        let data;
+        if (isCoachView && playerName) {
+          // For coach view, we'd need the player ID - for now, skip
+          setLoading(false);
+          return;
+        } else {
+          data = await healthAPI.getMyHealthData();
+        }
+        
+        setHealthData(data);
+        setRawTrendData(data.rawTrendData || []);
+      } catch (err: any) {
+        console.error('Error fetching health data:', err);
+        setError(err.message || 'Failed to load health data');
+        // Set default empty data structure
+        setHealthData({
+          healthScore: 0,
+          healthScoreTrend: 0,
+          recoveryDaysEstimate: 0,
+          lastUpdated: 'Never',
+          healthStatus: 'caution',
+          healthMetrics: {
+            restingHeartRate: { value: null, unit: 'bpm', trend: 0, status: 'good' },
+            heartRateVariability: { value: null, unit: 'ms', trend: 0, status: 'good' },
+            sleepQuality: { hours: null, qualityScore: null, trend: 0, status: 'good' },
+            activityLevel: { steps: null, activeMinutes: null, trend: 0, status: 'good' },
+            heartRateRecovery: { value: null, unit: 'bpm', trend: 0, status: 'good' },
+          },
+          alerts: [],
+          returnToPlayStatus: {
+            status: 'caution',
+            message: 'No data available',
+            details: 'Health data will appear here once available',
+          },
+          rawTrendData: [],
+          rawComparisonData: [],
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHealthData();
+  }, [playerId, isCoachView]);
+
+  // Extract values from health data with defaults
+  const healthScore = healthData?.healthScore ?? 0;
+  const healthScoreTrend = healthData?.healthScoreTrend ?? 0;
+  const recoveryDaysEstimate = healthData?.recoveryDaysEstimate ?? 0;
+  const lastUpdated = healthData?.lastUpdated ?? 'Never';
+  const healthStatus = healthData?.healthStatus ?? (healthScore >= 80 ? 'good' : healthScore >= 60 ? 'caution' : 'atRisk');
+  const healthMetrics = healthData?.healthMetrics ?? {
+    restingHeartRate: { value: null, unit: 'bpm', trend: 0, status: 'good' },
+    heartRateVariability: { value: null, unit: 'ms', trend: 0, status: 'good' },
+    sleepQuality: { hours: null, qualityScore: null, trend: 0, status: 'good' },
+    activityLevel: { steps: null, activeMinutes: null, trend: 0, status: 'good' },
+    heartRateRecovery: { value: null, unit: 'bpm', trend: 0, status: 'good' },
   };
-  
-  // Alerts and notifications data
-  const alerts = [
-    {
-      id: 1,
-      type: 'warning' as const,
-      message: 'Heart rate recovery is slower than baseline',
-      recommendation: 'Consider reducing activity intensity today',
-    },
-    {
-      id: 2,
-      type: 'info' as const,
-      message: 'Sleep quality improved 8% this week',
-      recommendation: 'Great progress! Keep maintaining your sleep schedule',
-    },
-  ];
-  
-  const returnToPlayStatus = {
-    status: 'caution' as const, // 'ready', 'caution', 'notReady'
-    message: 'Estimated 5 days until return to play',
-    details: 'Continue light activity, avoid contact sports',
+  const alerts = healthData?.alerts ?? [];
+  const returnToPlayStatus = healthData?.returnToPlayStatus ?? {
+    status: 'caution' as const,
+    message: 'No data available',
+    details: 'Health data will appear here once available',
   };
 
   // Animate icon when settings modal opens/closes
@@ -153,16 +199,39 @@ export default function AthleteDashboardScreen({ playerName, isCoachView = false
     router.back();
   };
 
-  // Line chart data for progress trend
-  const lineChartData = [
-    { value: 20, label: 'D1' },
-    { value: 45, label: 'D2' },
-    { value: 28, label: 'D3' },
-    { value: 80, label: 'D4' },
-    { value: 99, label: 'D5' },
-    { value: 43, label: 'D6' },
-    { value: 50, label: 'D7' },
-  ];
+  // Line chart data for progress trend - use real wellbeing/readiness trend data
+  const lineChartData = React.useMemo(() => {
+    if (!rawTrendData || rawTrendData.length === 0) {
+      // Return empty data if no trends available
+      return [];
+    }
+
+    // Find wellbeing or readiness trend
+    const wellbeingTrend = rawTrendData.find(t => 
+      (t.Category || '').toLowerCase().includes('wellbeing') ||
+      (t.Category || '').toLowerCase().includes('readiness') ||
+      (t.Name || '').toLowerCase().includes('wellbeing') ||
+      (t.Name || '').toLowerCase().includes('readiness')
+    );
+
+    if (!wellbeingTrend || !wellbeingTrend.Data || wellbeingTrend.Data.length === 0) {
+      // If no wellbeing trend, use the first available trend
+      const firstTrend = rawTrendData.find(t => t.Data && t.Data.length > 0);
+      if (!firstTrend || !firstTrend.Data) {
+        return [];
+      }
+      return firstTrend.Data.slice(-7).map((point: any, index: number) => ({
+        value: point.Value ?? 0,
+        label: `D${index + 1}`,
+      }));
+    }
+
+    // Use wellbeing trend data, take last 7 points
+    return wellbeingTrend.Data.slice(-7).map((point: any, index: number) => ({
+      value: point.Value ?? 0,
+      label: `D${index + 1}`,
+    }));
+  }, [rawTrendData]);
 
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
@@ -286,231 +355,259 @@ export default function AthleteDashboardScreen({ playerName, isCoachView = false
           <View style={styles.navIcons} />
         </View>
 
-        {/* Overall Health Score */}
-        <View style={styles.healthScoreSection}>
-          <View style={styles.healthScoreHeader}>
-            <Text style={styles.healthScoreTitle}>Overall Health Score (AHS)</Text>
+        {/* Loading State */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading health data...</Text>
           </View>
-          <TouchableOpacity
-            style={styles.healthScoreCard}
-            onPress={() => setHealthScoreDetailVisible(true)}
-            activeOpacity={0.8}>
-            <View style={styles.circleContainer}>
-              <Svg width={180} height={180} viewBox="0 0 196 196" fill="none">
-                {/* Outer circle background */}
-                <Circle
-                  cx="98"
-                  cy="98"
-                  r="90"
-                  fill="transparent"
-                  stroke={SemanticColors.borderMuted}
-                  strokeWidth="4"
-                />
-                {/* Status ring - color coded full circle */}
-                <Circle
-                  cx="98"
-                  cy="98"
-                  r="90"
-                  fill="transparent"
-                  stroke={healthStatus === 'good' ? '#40BF80' : healthStatus === 'caution' ? '#D2DB70' : '#E44F4F'}
-                  strokeWidth="6"
-                />
-                {/* Progress arc - calculated based on health score */}
-                {(() => {
-                  const percentage = healthScore / 100;
-                  const angle = (percentage * 360 - 90) * (Math.PI / 180);
-                  const x = 98 + 90 * Math.cos(angle);
-                  const y = 98 + 90 * Math.sin(angle);
-                  const largeArcFlag = percentage > 0.5 ? 1 : 0;
-                  return (
-                    <Path
-                      d={`M 98 8 A 90 90 0 ${largeArcFlag} 1 ${x} ${y} L 98 98 Z`}
-                      fill={BrandColors.purple}
-                      opacity={0.3}
-                    />
-                  );
-                })()}
-              </Svg>
-              <View style={styles.circleTextContainer}>
-                <Text style={styles.circleText}>{healthScore}%</Text>
-              </View>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Overall Health Score */}
+        {!loading && (
+          <View style={styles.healthScoreSection}>
+            <View style={styles.healthScoreHeader}>
+              <Text style={styles.healthScoreTitle}>Overall Health Score (AHS)</Text>
             </View>
-            <View style={styles.healthScoreInfo}>
-              <View style={styles.recoveryTimeline}>
-                <Text style={styles.recoveryLabel}>Estimated Recovery:</Text>
-                <Text style={styles.recoveryDays}>{recoveryDaysEstimate} days</Text>
+            <TouchableOpacity
+              style={styles.healthScoreCard}
+              onPress={() => setHealthScoreDetailVisible(true)}
+              activeOpacity={0.8}>
+              <View style={styles.circleContainer}>
+                <Svg width={180} height={180} viewBox="0 0 196 196" fill="none">
+                  {/* Outer circle background */}
+                  <Circle
+                    cx="98"
+                    cy="98"
+                    r="90"
+                    fill="transparent"
+                    stroke={SemanticColors.borderMuted}
+                    strokeWidth="4"
+                  />
+                  {/* Status ring - color coded full circle */}
+                  <Circle
+                    cx="98"
+                    cy="98"
+                    r="90"
+                    fill="transparent"
+                    stroke={healthStatus === 'good' ? '#40BF80' : healthStatus === 'caution' ? '#D2DB70' : '#E44F4F'}
+                    strokeWidth="6"
+                  />
+                  {/* Progress arc - calculated based on health score */}
+                  {(() => {
+                    const percentage = healthScore / 100;
+                    const angle = (percentage * 360 - 90) * (Math.PI / 180);
+                    const x = 98 + 90 * Math.cos(angle);
+                    const y = 98 + 90 * Math.sin(angle);
+                    const largeArcFlag = percentage > 0.5 ? 1 : 0;
+                    return (
+                      <Path
+                        d={`M 98 8 A 90 90 0 ${largeArcFlag} 1 ${x} ${y} L 98 98 Z`}
+                        fill={BrandColors.purple}
+                        opacity={0.3}
+                      />
+                    );
+                  })()}
+                </Svg>
+                <View style={styles.circleTextContainer}>
+                  <Text style={styles.circleText}>{healthScore}%</Text>
+                </View>
               </View>
-              <Text style={styles.lastUpdated}>Last updated: {lastUpdated}</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+              <View style={styles.healthScoreInfo}>
+                <View style={styles.recoveryTimeline}>
+                  <Text style={styles.recoveryLabel}>Estimated Recovery:</Text>
+                  <Text style={styles.recoveryDays}>{recoveryDaysEstimate} days</Text>
+                </View>
+                <Text style={styles.lastUpdated}>Last updated: {lastUpdated}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Progress Trend */}
-        <View style={styles.progressTrendSection}>
-          <View style={styles.progressTrendCard}>
-            <Text style={styles.progressTrendTitle}>Progress Trend</Text>
-            <Text style={styles.progressTrendSubtitle}>Metrics</Text>
-            <View style={styles.chartContainer}>
-              <LineChart
-                data={lineChartData}
-                width={screenWidth - 72}
-                height={180}
-                spacing={40}
-                thickness={3}
-                color={BrandColors.purple}
-                hideRules={false}
-                hideYAxisText={false}
-                yAxisColor={SemanticColors.borderMuted}
-                xAxisColor={SemanticColors.borderMuted}
-                rulesColor={SemanticColors.borderMuted}
-                rulesType="solid"
-                curved
-                areaChart
-                startFillColor={BrandColors.purple}
-                endFillColor={BrandColors.purple}
-                startOpacity={0.2}
-                endOpacity={0.05}
-                initialSpacing={0}
-                noOfSections={4}
-                maxValue={100}
-                yAxisTextStyle={{
-                  color: SemanticColors.textSecondary,
-                  fontSize: 10,
-                }}
-                xAxisLabelTextStyle={{
-                  color: SemanticColors.textSecondary,
-                  fontSize: 10,
-                }}
-                dataPointsColor={BrandColors.purple}
-                dataPointsRadius={5}
-                textShiftY={-2}
-                textShiftX={-5}
-                textFontSize={10}
-                textColor={SemanticColors.textSecondary}
-                showVerticalLines
-                verticalLinesColor={SemanticColors.borderMuted}
-                verticalLinesThickness={0.5}
-                showStripOnFingerPress
-                stripColor={BrandColors.purple}
-                stripOpacity={0.3}
-                stripWidth={2}
-              />
+        {!loading && (
+          <View style={styles.progressTrendSection}>
+            <View style={styles.progressTrendCard}>
+              <Text style={styles.progressTrendTitle}>Progress Trend</Text>
+              <Text style={styles.progressTrendSubtitle}>Metrics</Text>
+              {lineChartData.length > 0 ? (
+                <View style={styles.chartContainer}>
+                  <LineChart
+                    data={lineChartData}
+                    width={screenWidth - 72}
+                    height={180}
+                    spacing={40}
+                    thickness={3}
+                    color={BrandColors.purple}
+                    hideRules={false}
+                    hideYAxisText={false}
+                    yAxisColor={SemanticColors.borderMuted}
+                    xAxisColor={SemanticColors.borderMuted}
+                    rulesColor={SemanticColors.borderMuted}
+                    rulesType="solid"
+                    curved
+                    areaChart
+                    startFillColor={BrandColors.purple}
+                    endFillColor={BrandColors.purple}
+                    startOpacity={0.2}
+                    endOpacity={0.05}
+                    initialSpacing={0}
+                    noOfSections={4}
+                    maxValue={Math.max(100, ...lineChartData.map(d => d.value))}
+                    yAxisTextStyle={{
+                      color: SemanticColors.textSecondary,
+                      fontSize: 10,
+                    }}
+                    xAxisLabelTextStyle={{
+                      color: SemanticColors.textSecondary,
+                      fontSize: 10,
+                    }}
+                    dataPointsColor={BrandColors.purple}
+                    dataPointsRadius={5}
+                    textShiftY={-2}
+                    textShiftX={-5}
+                    textFontSize={10}
+                    textColor={SemanticColors.textSecondary}
+                    showVerticalLines
+                    verticalLinesColor={SemanticColors.borderMuted}
+                    verticalLinesThickness={0.5}
+                    showStripOnFingerPress
+                    stripColor={BrandColors.purple}
+                    stripOpacity={0.3}
+                    stripWidth={2}
+                  />
+                </View>
+              ) : (
+                <View style={styles.emptyChartContainer}>
+                  <Text style={styles.emptyChartText}>No trend data available yet</Text>
+                </View>
+              )}
+              <Text style={styles.daysLabel}>Days</Text>
             </View>
-            <Text style={styles.daysLabel}>Days</Text>
           </View>
-        </View>
+        )}
 
         {/* Metrics Overview */}
-        <View style={styles.metricsSection}>
-          <Text style={styles.metricsTitle}>Metrics Overview</Text>
+        {!loading && (
+          <View style={styles.metricsSection}>
+            <Text style={styles.metricsTitle}>Metrics Overview</Text>
 
-          <View style={styles.metricsGrid}>
-            {/* Readiness & Recovery */}
-            <MetricCard
-              zoneColor={SemanticColors.zoneGreen}
-              zoneLabel="Green Zone"
-              value="85%"
-              title="Readiness & Recovery"
-              status="Looking Good"
-            />
+            <View style={styles.metricsGrid}>
+              {/* Readiness & Recovery - calculate from health score */}
+              <MetricCard
+                zoneColor={healthScore >= 80 ? SemanticColors.zoneGreen : healthScore >= 60 ? SemanticColors.zoneYellow : SemanticColors.zoneRed}
+                zoneLabel={healthScore >= 80 ? "Green Zone" : healthScore >= 60 ? "Yellow Zone" : "Red Zone"}
+                value={`${healthScore}%`}
+                title="Readiness & Recovery"
+                status={healthScore >= 80 ? "Looking Good" : healthScore >= 60 ? "Needs Attention" : "At Risk"}
+              />
 
-            {/* Sleep */}
-            <MetricCard
-              zoneColor={SemanticColors.zoneYellow}
-              zoneLabel="Yellow Zone"
-              value="72%"
-              title="Sleep"
-              status="Needs Improvement"
-            />
+              {/* Sleep */}
+              <MetricCard
+                zoneColor={healthMetrics.sleepQuality.status === 'good' ? SemanticColors.zoneGreen : healthMetrics.sleepQuality.status === 'caution' ? SemanticColors.zoneYellow : SemanticColors.zoneRed}
+                zoneLabel={healthMetrics.sleepQuality.status === 'good' ? "Green Zone" : healthMetrics.sleepQuality.status === 'caution' ? "Yellow Zone" : "Red Zone"}
+                value={healthMetrics.sleepQuality.qualityScore !== null ? `${healthMetrics.sleepQuality.qualityScore}%` : 'N/A'}
+                title="Sleep"
+                status={healthMetrics.sleepQuality.qualityScore !== null ? (healthMetrics.sleepQuality.status === 'good' ? "Looking Good" : healthMetrics.sleepQuality.status === 'caution' ? "Needs Improvement" : "At Risk") : "No Data"}
+              />
 
-            {/* Activity */}
-            <MetricCard
-              zoneColor={SemanticColors.zoneGreen}
-              zoneLabel="Green Zone"
-              value="90%"
-              title="Activity"
-              status="Looking Good"
-            />
+              {/* Activity */}
+              <MetricCard
+                zoneColor={healthMetrics.activityLevel.status === 'good' ? SemanticColors.zoneGreen : healthMetrics.activityLevel.status === 'caution' ? SemanticColors.zoneYellow : SemanticColors.zoneRed}
+                zoneLabel={healthMetrics.activityLevel.status === 'good' ? "Green Zone" : healthMetrics.activityLevel.status === 'caution' ? "Yellow Zone" : "Red Zone"}
+                value={healthMetrics.activityLevel.steps !== null ? `${Math.round((healthMetrics.activityLevel.steps / 10000) * 100)}%` : 'N/A'}
+                title="Activity"
+                status={healthMetrics.activityLevel.steps !== null ? (healthMetrics.activityLevel.status === 'good' ? "Looking Good" : healthMetrics.activityLevel.status === 'caution' ? "Needs Improvement" : "At Risk") : "No Data"}
+              />
 
-            {/* Well-being / Context */}
-            <MetricCard
-              zoneColor={SemanticColors.zoneGreen}
-              zoneLabel="Green Zone"
-              value="88%"
-              title="Well-being / Context"
-              status="Looking Good"
-            />
+              {/* Well-being / Context - use health score trend */}
+              <MetricCard
+                zoneColor={healthScoreTrend >= 0 ? SemanticColors.zoneGreen : SemanticColors.zoneYellow}
+                zoneLabel={healthScoreTrend >= 0 ? "Green Zone" : "Yellow Zone"}
+                value={healthScore > 0 ? `${healthScore}%` : 'N/A'}
+                title="Well-being / Context"
+                status={healthScoreTrend >= 0 ? "Looking Good" : "Needs Improvement"}
+              />
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Critical Health Metrics */}
-        <View style={styles.criticalMetricsSection}>
-          <Text style={styles.criticalMetricsTitle}>Critical Health Metrics</Text>
-          
-          <View style={styles.criticalMetricsGrid}>
-            {/* Resting Heart Rate */}
-            <HealthMetricCard
-              title="Resting Heart Rate"
-              value={healthMetrics.restingHeartRate.value}
-              unit={healthMetrics.restingHeartRate.unit}
-              trend={healthMetrics.restingHeartRate.trend}
-              status={healthMetrics.restingHeartRate.status}
-              iconName="heart"
-              animationIndex={0}
-            />
+        {!loading && (
+          <View style={styles.criticalMetricsSection}>
+            <Text style={styles.criticalMetricsTitle}>Critical Health Metrics</Text>
             
-            {/* Heart Rate Variability */}
-            <HealthMetricCard
-              title="Heart Rate Variability"
-              value={healthMetrics.heartRateVariability.value}
-              unit={healthMetrics.heartRateVariability.unit}
-              trend={healthMetrics.heartRateVariability.trend}
-              status={healthMetrics.heartRateVariability.status}
-              iconName="pulse"
-              animationIndex={1}
-            />
+            <View style={styles.criticalMetricsGrid}>
+              {/* Resting Heart Rate */}
+              <HealthMetricCard
+                title="Resting Heart Rate"
+                value={healthMetrics.restingHeartRate.value ?? 0}
+                unit={healthMetrics.restingHeartRate.unit}
+                trend={healthMetrics.restingHeartRate.trend}
+                status={healthMetrics.restingHeartRate.status}
+                iconName="heart"
+                animationIndex={0}
+              />
+              
+              {/* Heart Rate Variability */}
+              <HealthMetricCard
+                title="Heart Rate Variability"
+                value={healthMetrics.heartRateVariability.value ?? 0}
+                unit={healthMetrics.heartRateVariability.unit}
+                trend={healthMetrics.heartRateVariability.trend}
+                status={healthMetrics.heartRateVariability.status}
+                iconName="pulse"
+                animationIndex={1}
+              />
+              
+              {/* Sleep Quality */}
+              <HealthMetricCard
+                title="Sleep Quality"
+                value={healthMetrics.sleepQuality.hours ?? 0}
+                unit="hrs"
+                secondaryValue={healthMetrics.sleepQuality.qualityScore ?? undefined}
+                secondaryUnit={healthMetrics.sleepQuality.qualityScore !== null ? "score" : undefined}
+                trend={healthMetrics.sleepQuality.trend}
+                status={healthMetrics.sleepQuality.status}
+                iconName="moon"
+                animationIndex={2}
+              />
+              
+              {/* Activity Level */}
+              <HealthMetricCard
+                title="Activity Level"
+                value={healthMetrics.activityLevel.steps ?? 0}
+                unit="steps"
+                secondaryValue={healthMetrics.activityLevel.activeMinutes ?? undefined}
+                secondaryUnit={healthMetrics.activityLevel.activeMinutes !== null ? "min" : undefined}
+                trend={healthMetrics.activityLevel.trend}
+                status={healthMetrics.activityLevel.status}
+                iconName="walk"
+                animationIndex={3}
+              />
+            </View>
             
-            {/* Sleep Quality */}
-            <HealthMetricCard
-              title="Sleep Quality"
-              value={healthMetrics.sleepQuality.hours}
-              unit="hrs"
-              secondaryValue={healthMetrics.sleepQuality.qualityScore}
-              secondaryUnit="score"
-              trend={healthMetrics.sleepQuality.trend}
-              status={healthMetrics.sleepQuality.status}
-              iconName="moon"
-              animationIndex={2}
-            />
-            
-            {/* Activity Level */}
-            <HealthMetricCard
-              title="Activity Level"
-              value={healthMetrics.activityLevel.steps}
-              unit="steps"
-              secondaryValue={healthMetrics.activityLevel.activeMinutes}
-              secondaryUnit="min"
-              trend={healthMetrics.activityLevel.trend}
-              status={healthMetrics.activityLevel.status}
-              iconName="walk"
-              animationIndex={3}
-            />
+            {/* Heart Rate Recovery - Centered */}
+            <View style={styles.centeredMetricCard}>
+              <HealthMetricCard
+                title="Heart Rate Recovery"
+                value={healthMetrics.heartRateRecovery.value ?? 0}
+                unit={healthMetrics.heartRateRecovery.unit}
+                trend={healthMetrics.heartRateRecovery.trend}
+                status={healthMetrics.heartRateRecovery.status}
+                iconName="flash"
+                isCentered={true}
+                animationIndex={4}
+              />
+            </View>
           </View>
-          
-          {/* Heart Rate Recovery - Centered */}
-          <View style={styles.centeredMetricCard}>
-            <HealthMetricCard
-              title="Heart Rate Recovery"
-              value={healthMetrics.heartRateRecovery.value}
-              unit={healthMetrics.heartRateRecovery.unit}
-              trend={healthMetrics.heartRateRecovery.trend}
-              status={healthMetrics.heartRateRecovery.status}
-              iconName="flash"
-              isCentered={true}
-              animationIndex={4}
-            />
-          </View>
-        </View>
+        )}
 
         {/* Missing Overnight Data */}
         <View style={styles.missingDataSection}>
@@ -1209,5 +1306,35 @@ const styles = StyleSheet.create({
   dataEntryHint: {
     fontSize: Typography.fontSize.sm,
     color: SemanticColors.textTertiary,
+  },
+  loadingContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  loadingText: {
+    color: SemanticColors.textSecondary,
+    fontSize: Typography.fontSize.base,
+  },
+  errorContainer: {
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  errorText: {
+    color: SemanticColors.error,
+    fontSize: Typography.fontSize.base,
+    textAlign: 'center',
+  },
+  emptyChartContainer: {
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyChartText: {
+    color: SemanticColors.textTertiary,
+    fontSize: Typography.fontSize.sm,
   },
 });
