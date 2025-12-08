@@ -73,15 +73,22 @@ class SahhaService {
     try {
       const token = await this.getAccountToken();
       
+      // Build profile data - only include demographic fields that are provided
       const profileData = {
-        externalId: playerData.externalId || playerData._id?.toString(),
-        demographic: {
-          age: playerData.Age,
-          sex_at_birth: playerData.SexAtBirth?.toLowerCase(),
-          weight_kg: playerData.Bodyweight_in_pounds ? (playerData.Bodyweight_in_pounds * 0.453592) : null,
-          height_cm: playerData.Height_in_inches ? (playerData.Height_in_inches * 2.54) : null
-        }
+        externalId: playerData.externalId || playerData._id?.toString()
       };
+
+      // Only include demographic object if at least one field is provided
+      const demographic = {};
+      if (playerData.Age) demographic.age = playerData.Age;
+      if (playerData.SexAtBirth) demographic.sex_at_birth = playerData.SexAtBirth.toLowerCase();
+      if (playerData.Bodyweight_in_pounds) demographic.weight_kg = playerData.Bodyweight_in_pounds * 0.453592;
+      if (playerData.Height_in_inches) demographic.height_cm = playerData.Height_in_inches * 2.54;
+
+      // Only add demographic object if it has at least one field
+      if (Object.keys(demographic).length > 0) {
+        profileData.demographic = demographic;
+      }
 
       const response = await axios.post(
         `${this.dataBaseURL}/api/v1/oauth/profile/register`,
@@ -117,22 +124,56 @@ class SahhaService {
 
   /**
    * Get trends for a profile
+   * Note: profileId can be either the actual profile ID or external ID
+   * Correct endpoint: /api/v1/profile/insight/trend
    */
   async getTrends(profileId, options = {}) {
     try {
       const token = await this.getAccountToken();
       
-      const params = new URLSearchParams();
-      if (options.startDate) params.append('start_date', options.startDate);
-      if (options.endDate) params.append('end_date', options.endDate);
-      if (options.category) params.append('category', options.category);
+      // First, resolve to actual profile ID if needed
+      let actualProfileId = profileId;
+      try {
+        // Try to get profile info to find actual profile ID (works with external ID)
+        const profileInfo = await axios.get(
+          `${this.dataBaseURL}/api/v1/account/profile/${profileId}`,
+          {
+            headers: {
+              'Authorization': `account ${token}`
+            }
+          }
+        );
+        
+        if (profileInfo.data?.profileId) {
+          actualProfileId = profileInfo.data.profileId;
+        }
+      } catch (error) {
+        // If profile info fails, try using profileId as-is (might already be actual ID)
+        console.warn('Could not resolve profile ID, using provided ID:', profileId);
+      }
       
+      // Build query parameters for the correct endpoint
+      const params = new URLSearchParams();
+      params.append('profileId', actualProfileId);
+      if (options.startDate) params.append('startDateTime', options.startDate.includes('T') ? options.startDate : `${options.startDate}T00:00:00Z`);
+      if (options.endDate) params.append('endDateTime', options.endDate.includes('T') ? options.endDate : `${options.endDate}T23:59:59Z`);
+      if (options.category) params.append('category', options.category);
+      if (options.name) params.append('name', options.name);
+      
+      // Use the correct endpoint format: /api/v1/profile/insight/trend/{profileId}
+      // Query params don't work (401), but path param does (200)
       const response = await axios.get(
-        `${this.dataBaseURL}/api/v1/profiles/${profileId}/trends?${params.toString()}`,
+        `${this.dataBaseURL}/api/v1/profile/insight/trend/${actualProfileId}`,
         {
           headers: {
-            'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
-          }
+            'Authorization': `account ${token}`
+          },
+          params: options.startDate || options.endDate ? {
+            startDateTime: options.startDate?.includes('T') ? options.startDate : (options.startDate ? `${options.startDate}T00:00:00Z` : undefined),
+            endDateTime: options.endDate?.includes('T') ? options.endDate : (options.endDate ? `${options.endDate}T23:59:59Z` : undefined),
+            category: options.category,
+            name: options.name
+          } : {}
         }
       );
 
@@ -145,22 +186,56 @@ class SahhaService {
 
   /**
    * Get comparisons for a profile
+   * Note: profileId can be either the actual profile ID or external ID
+   * Correct endpoint: /api/v1/profile/insight/comparison
    */
   async getComparisons(profileId, options = {}) {
     try {
       const token = await this.getAccountToken();
       
-      const params = new URLSearchParams();
-      if (options.startDate) params.append('start_date', options.startDate);
-      if (options.endDate) params.append('end_date', options.endDate);
-      if (options.category) params.append('category', options.category);
+      // First, resolve to actual profile ID if needed
+      let actualProfileId = profileId;
+      try {
+        // Try to get profile info to find actual profile ID (works with external ID)
+        const profileInfo = await axios.get(
+          `${this.dataBaseURL}/api/v1/account/profile/${profileId}`,
+          {
+            headers: {
+              'Authorization': `account ${token}`
+            }
+          }
+        );
+        
+        if (profileInfo.data?.profileId) {
+          actualProfileId = profileInfo.data.profileId;
+        }
+      } catch (error) {
+        // If profile info fails, try using profileId as-is (might already be actual ID)
+        console.warn('Could not resolve profile ID, using provided ID:', profileId);
+      }
       
+      // Build query parameters for the correct endpoint
+      const params = new URLSearchParams();
+      params.append('profileId', actualProfileId);
+      if (options.startDate) params.append('startDateTime', options.startDate.includes('T') ? options.startDate : `${options.startDate}T00:00:00Z`);
+      if (options.endDate) params.append('endDateTime', options.endDate.includes('T') ? options.endDate : `${options.endDate}T23:59:59Z`);
+      if (options.category) params.append('category', options.category);
+      if (options.name) params.append('name', options.name);
+      
+      // Use the correct endpoint format: /api/v1/profile/insight/comparison/{profileId}
+      // Query params don't work (401), but path param does (200)
       const response = await axios.get(
-        `${this.dataBaseURL}/api/v1/profiles/${profileId}/comparisons?${params.toString()}`,
+        `${this.dataBaseURL}/api/v1/profile/insight/comparison/${actualProfileId}`,
         {
           headers: {
-            'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
-          }
+            'Authorization': `account ${token}`
+          },
+          params: options.startDate || options.endDate ? {
+            startDateTime: options.startDate?.includes('T') ? options.startDate : (options.startDate ? `${options.startDate}T00:00:00Z` : undefined),
+            endDateTime: options.endDate?.includes('T') ? options.endDate : (options.endDate ? `${options.endDate}T23:59:59Z` : undefined),
+            category: options.category,
+            name: options.name
+          } : {}
         }
       );
 

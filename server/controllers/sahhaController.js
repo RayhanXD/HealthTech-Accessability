@@ -222,9 +222,11 @@ const handleWebhook = async (req, res) => {
 // @desc    Get health scores from Sahha
 // @route   GET /api/sahha/scores/:sahhaProfileId
 // @access  Public
+// Query params: types (comma-separated: wellbeing,activity,readiness,mental_wellbeing), startDateTime, endDateTime
 const getHealthScores = async (req, res) => {
   try {
     const { sahhaProfileId } = req.params;
+    const { types, startDateTime, endDateTime } = req.query;
 
     if (!sahhaProfileId) {
       return res.status(400).json({
@@ -234,28 +236,60 @@ const getHealthScores = async (req, res) => {
     }
 
     const token = await sahhaService.getAccountToken();
-    
     const axios = require('axios');
     const dataBaseURL = process.env.SAHHA_API_BASE_URL || 'https://sandbox-api.sahha.ai';
-    const response = await axios.get(
-      `${dataBaseURL}/api/v1/profiles/${sahhaProfileId}/scores`,
-      {
-        headers: {
-          'Authorization': `account ${token}` // Per OpenAPI spec: account tokens use "account {token}" not "Bearer {token}"
-        }
+    
+    // Build query parameters
+    const scoreTypes = types || 'wellbeing,activity,readiness,mental_wellbeing';
+    
+    // Default to last 7 days if no dates provided
+    let startDate = startDateTime;
+    let endDate = endDateTime;
+    if (!startDate || !endDate) {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      startDate = startDate || start.toISOString();
+      endDate = endDate || end.toISOString();
+    }
+    
+    // Use the correct endpoint format: /api/v1/profile/score/{profileId} with query params
+    const url = `${dataBaseURL}/api/v1/profile/score/${sahhaProfileId}?types=${encodeURIComponent(scoreTypes)}&startDateTime=${encodeURIComponent(startDate)}&endDateTime=${encodeURIComponent(endDate)}`;
+    
+    const response = await axios.get(url, {
+      headers: {
+        'Authorization': `account ${token}`
       }
-    );
+    });
 
     res.json({
       success: true,
-      data: response.data
+      data: response.data?.data || response.data || []
     });
   } catch (error) {
     console.error('Error getting health scores:', error);
+    
+    // Handle specific error cases
+    if (error.response?.status === 400) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request parameters',
+        error: error.response.data?.errors?.[0]?.errors?.[0] || error.message
+      });
+    }
+    
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profile not found or scores endpoint not available',
+        error: error.response.data?.message || error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to get health scores',
-      error: error.message
+      error: error.response?.data?.message || error.message
     });
   }
 };

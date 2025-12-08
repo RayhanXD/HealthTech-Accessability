@@ -130,6 +130,61 @@ const createPlayer = async (req, res) => {
 
     await player.save();
 
+    // Automatically create Sahha profile (demographic data is optional)
+    // Profile can be created with just externalId, demographics can be added later
+    try {
+      const sahhaService = require('../services/sahhaService');
+      const sahhaProfile = await sahhaService.createProfile({
+        externalId: player._id.toString(),
+        Age,
+        Bodyweight_in_pounds,
+        Height_in_inches,
+        SexAtBirth
+      });
+
+        // Extract profile ID from response
+        let profileId = sahhaProfile.id || sahhaProfile.profile_id;
+        if (!profileId && sahhaProfile.profileToken) {
+          try {
+            const jwt = require('jsonwebtoken');
+            const decoded = jwt.decode(sahhaProfile.profileToken);
+            profileId = decoded?.['https://api.sahha.ai/claims/profileId'] || decoded?.profileId;
+          } catch (error) {
+            console.warn('Could not decode profileToken to get profileId:', error.message);
+          }
+        }
+        
+        // If still no profile ID, use externalId (playerId) as identifier
+        if (!profileId) {
+          profileId = player._id.toString();
+        }
+
+        // Fetch initial insights (may be empty on first sync)
+        let insights;
+        try {
+          insights = await sahhaService.syncInsights(profileId);
+        } catch (error) {
+          // If insights fail but profile was created, still continue with empty insights
+          console.warn('⚠️ Error fetching initial insights:', error.message);
+          insights = {
+            Trends: [],
+            Comparisons: []
+          };
+        }
+
+        // Save Sahha profile ID and token to player
+        player.sahhaProfileId = profileId;
+        player.sahhaProfileToken = sahhaProfile.profileToken || sahhaProfile.token || sahhaProfile.profile_token;
+        player.Insights = insights;
+        await player.save();
+
+      console.log(`✅ Sahha profile created automatically for player ${player._id}: ${profileId}`);
+    } catch (error) {
+      // Log error but don't fail player creation if Sahha profile creation fails
+      console.error('⚠️ Failed to create Sahha profile automatically:', error.message);
+      console.error('   Player was still created successfully. Sahha profile can be created later.');
+    }
+
     res.status(201).json({
       success: true,
       message: 'Player created successfully',
@@ -204,6 +259,58 @@ const updatePlayer = async (req, res) => {
         success: false,
         message: 'Player not found'
       });
+    }
+
+    // If player doesn't have Sahha profile, create it (demographic data is optional)
+    if (!player.sahhaProfileId) {
+      try {
+        const sahhaService = require('../services/sahhaService');
+        const sahhaProfile = await sahhaService.createProfile({
+          externalId: player._id.toString(),
+          Age: player.Age,
+          Bodyweight_in_pounds: player.Bodyweight_in_pounds,
+          Height_in_inches: player.Height_in_inches,
+          SexAtBirth: player.SexAtBirth
+        });
+
+        // Extract profile ID from response
+        let profileId = sahhaProfile.id || sahhaProfile.profile_id;
+        if (!profileId && sahhaProfile.profileToken) {
+          try {
+            const jwt = require('jsonwebtoken');
+            const decoded = jwt.decode(sahhaProfile.profileToken);
+            profileId = decoded?.['https://api.sahha.ai/claims/profileId'] || decoded?.profileId;
+          } catch (error) {
+            console.warn('Could not decode profileToken to get profileId:', error.message);
+          }
+        }
+        
+        if (!profileId) {
+          profileId = player._id.toString();
+        }
+
+        // Fetch initial insights
+        let insights;
+        try {
+          insights = await sahhaService.syncInsights(profileId);
+        } catch (error) {
+          console.warn('⚠️ Error fetching initial insights:', error.message);
+          insights = {
+            Trends: [],
+            Comparisons: []
+          };
+        }
+
+        // Save Sahha profile ID and token to player
+        player.sahhaProfileId = profileId;
+        player.sahhaProfileToken = sahhaProfile.profileToken || sahhaProfile.token || sahhaProfile.profile_token;
+        player.Insights = insights;
+        await player.save();
+
+        console.log(`✅ Sahha profile created automatically for player ${player._id}: ${profileId}`);
+      } catch (error) {
+        console.error('⚠️ Failed to create Sahha profile automatically:', error.message);
+      }
     }
 
     res.json({

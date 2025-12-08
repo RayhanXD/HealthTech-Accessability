@@ -163,3 +163,4 @@ async function fixEmailIndexes() {
 
 // Run the function
 fixEmailIndexes();
+

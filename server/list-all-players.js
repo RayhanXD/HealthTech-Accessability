@@ -56,3 +56,4 @@ async function listAllPlayers() {
 
 // Run the function
 listAllPlayers();
+

@@ -141,6 +141,65 @@ const registerPlayer = async (req, res) => {
       throw saveError;
     }
 
+    // Automatically create Sahha profile (demographic data is optional)
+    // Profile can be created with just externalId, demographics can be added later
+    try {
+      const sahhaService = require('../services/sahhaService');
+      const sahhaProfile = await sahhaService.createProfile({
+        externalId: player._id.toString(),
+        Age: age,
+        Bodyweight_in_pounds: bodyweight_in_pounds,
+        Height_in_inches: height_in_inches,
+        SexAtBirth: sex_at_birth
+      });
+
+        // Extract profile ID from response
+        let profileId = sahhaProfile.id || sahhaProfile.profile_id;
+        if (!profileId && sahhaProfile.profileToken) {
+          try {
+            const jwt = require('jsonwebtoken');
+            const decoded = jwt.decode(sahhaProfile.profileToken);
+            profileId = decoded?.['https://api.sahha.ai/claims/profileId'] || decoded?.profileId;
+          } catch (error) {
+            console.warn('Could not decode profileToken to get profileId:', error.message);
+          }
+        }
+        
+        // If still no profile ID, use externalId (playerId) as identifier
+        if (!profileId) {
+          profileId = player._id.toString();
+        }
+
+        // Fetch initial insights (may be empty on first sync)
+        let insights;
+        try {
+          insights = await sahhaService.syncInsights(profileId);
+        } catch (error) {
+          // If insights fail but profile was created, still continue with empty insights
+          console.warn('⚠️ Error fetching initial insights:', error.message);
+          insights = {
+            Trends: [],
+            Comparisons: []
+          };
+        }
+
+        // Save Sahha profile ID and token to player
+        player.sahhaProfileId = profileId;
+        player.sahhaProfileToken = sahhaProfile.profileToken || sahhaProfile.token || sahhaProfile.profile_token;
+        player.Insights = insights;
+        await player.save();
+
+      console.log(`✅ Sahha profile created automatically for player ${player._id}: ${profileId}`);
+    } catch (error) {
+      // Log error but don't fail player registration if Sahha profile creation fails
+      console.error('⚠️ Failed to create Sahha profile automatically:', error.message);
+      if (error.response) {
+        console.error('   API Response:', JSON.stringify(error.response.data, null, 2));
+        console.error('   Status:', error.response.status);
+      }
+      console.error('   Player was still registered successfully. Sahha profile can be created later.');
+    }
+
     // Generate token
     const token = generateToken(player._id, 'player');
 
@@ -153,7 +212,8 @@ const registerPlayer = async (req, res) => {
         email: player.Email,
         firstName: player.fName,
         lastName: player.Lname,
-        role: 'player'
+        role: 'player',
+        sahhaProfileId: player.sahhaProfileId || null
       }
     });
   } catch (error) {

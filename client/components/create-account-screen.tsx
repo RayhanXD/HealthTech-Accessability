@@ -233,6 +233,11 @@ export default function CreateAccountScreen({
       await AsyncStorage.setItem('firstName', firstName.trim());
       await AsyncStorage.setItem('lastName', lastName.trim());
       
+      // Store playerId for Sahha initialization (if player)
+      if (!isCoach && response.user.id) {
+        await AsyncStorage.setItem('playerId', response.user.id);
+      }
+      
       // Navigate based on role
       if (isCoach) {
         router.push('/congratulations' as any);

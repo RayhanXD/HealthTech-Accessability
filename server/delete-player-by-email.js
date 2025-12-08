@@ -69,3 +69,4 @@ const email = process.argv[2];
 
 // Run the function
 deletePlayerByEmail(email);
+

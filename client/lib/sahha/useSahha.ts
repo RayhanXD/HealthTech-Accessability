@@ -43,14 +43,25 @@ export function useSahha(options: UseSahhaOptions = {}) {
       });
 
       if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json();
+        const errorData = await tokenResponse.json().catch(() => ({ message: 'Unknown error' }));
         
         // If profile doesn't exist, return error with action
         if (tokenResponse.status === 400 && errorData.action === 'initialize_profile') {
           throw new Error('Sahha profile not initialized. Please complete profile setup first.');
         }
         
-        throw new Error(errorData.message || 'Failed to get Sahha token');
+        // If player not found
+        if (tokenResponse.status === 404) {
+          throw new Error('Player not found. Please check your account.');
+        }
+        
+        // Provide more specific error message
+        const errorMessage = errorData.message || `Failed to get Sahha token (Status: ${tokenResponse.status})`;
+        console.error('Token request failed:', {
+          status: tokenResponse.status,
+          error: errorData
+        });
+        throw new Error(errorMessage);
       }
 
       const { token } = await tokenResponse.json();

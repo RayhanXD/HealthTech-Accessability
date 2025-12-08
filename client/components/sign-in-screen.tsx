@@ -130,6 +130,11 @@ export default function SignInScreen({
       await AsyncStorage.setItem('firstName', response.user.firstName);
       await AsyncStorage.setItem('lastName', response.user.lastName);
       
+      // Store playerId for Sahha initialization (if player)
+      if (role === 'player' && response.user.id) {
+        await AsyncStorage.setItem('playerId', response.user.id);
+      }
+      
       // Navigate to appropriate dashboard
       if (role === 'coach' || role === 'trainer') {
         router.push('/coach-dashboard' as any);

@@ -75,3 +75,4 @@ async function checkEmailExists(email) {
 
 const email = process.argv[2];
 checkEmailExists(email);
+
