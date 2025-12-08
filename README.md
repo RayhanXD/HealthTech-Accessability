@@ -48,7 +48,6 @@ Syntra integrates with Apple Health via the Sahha SDK to collect physiological m
 
 - Node.js 18+
 - MongoDB 7.0+
-- Docker & Docker Compose (recommended)
 
 ### Development Setup
 
