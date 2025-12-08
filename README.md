@@ -464,15 +464,6 @@ syntra/
 
 ---
 
-## Acknowledgments
-
-- **Texas Convergent** — For the platform and mentorship
-- **University of Texas at Austin** — Institutional support
-- **Sahha SDK** — Health data integration
-- **Apple HealthKit** — Wearable data access
-
----
-
 <div align="center">
   <p><em>Bringing Synergy to Training</em></p>
 </div>
