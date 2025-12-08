@@ -24,6 +24,64 @@ Syntra integrates with Apple Health via the Sahha SDK to collect physiological m
 
 ---
 
+## User-Centered Design
+
+### Dual Dashboard System
+
+**Athlete Dashboard** — Personal health insights:
+- Real-time physiological metrics visualization
+- Historical trend analysis with charts
+- Personalized recovery recommendations
+- Sleep quality and activity breakdowns
+
+**Coach Dashboard** — Team health overview:
+- Aggregate team performance metrics
+- At-risk athlete identification
+- Comparative analytics across roster
+- Automated health status alerts
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- MongoDB 7.0+
+- Docker & Docker Compose (recommended)
+
+### Development Setup
+
+```bash
+# Clone repository
+git clone -b dev https://github.com/RayhanXD/HealthTech-Accessability.git
+cd HealthTech-Accessability
+
+# Install and run the mobile client
+cd client
+npm install
+npm start          # Start iOS simulator
+
+# In a separate terminal, start the backend server
+cd server
+npm install
+npm start          # Start development server
+
+```
+
+### Environment Variables
+
+```env
+MONGODB_URI=mongodb+srv://RayhanM:TeslaModel32024@convergent.rp9jupu.mongodb.net/?appName=convergent
+SAHHA_API_BASE_URL=https://sandbox-api.sahha.ai
+SAHHA_AUTH_BASE_URL=https://app.sahha.ai
+SAHHA_ENVIRONMENT=sandbox
+SAHHA_CLIENT_ID=sNueKtNAWveFAQP42gxX6EkWe4ZfkRVs
+SAHHA_CLIENT_SECRET=9zrrNLfNoh3RRzWcBt70WgMmpwdi1ZVJGInxYRPvhHYugTAPlXGHGxL2kLomq3dc
+```
+
+---
+
 ## Technical Architecture
 
 ### System Design
@@ -42,7 +100,7 @@ Syntra integrates with Apple Health via the Sahha SDK to collect physiological m
         │                        │
         ▼                        ▼
 ┌─────────────────┐     ┌──────────────────┐
-│ Athlete Dashboard│     │ Coach Dashboard  │
+│Athlete Dashboard│     │ Coach Dashboard  │
 │  (Insights UI)  │     │  (Team Overview) │
 └─────────────────┘     └──────────────────┘
 ```
@@ -55,7 +113,6 @@ Syntra integrates with Apple Health via the Sahha SDK to collect physiological m
 | Health Integration | Sahha SDK + Apple HealthKit | Wearable data collection |
 | API Server | Node.js + Express | RESTful backend services |
 | Database | MongoDB | Player/trainer data persistence |
-| Caching | Redis | Session management & performance |
 | Containerization | Docker | Deployment & scaling |
 
 ---
@@ -139,62 +196,101 @@ We use MongoDB with Mongoose ODM for flexible, document-based storage optimized 
 
 ## Algorithm Implementation
 
-### Trend Analysis Engine
+### Score Computation Model
 
-The trend analysis system processes raw health data to identify meaningful patterns:
+Health scores are derived from complex models that analyze various user data points. Each score produces a value between 0.0 and 1.0, with explainability factors that highlight which specific behaviors are contributing positively or negatively.
 
-```javascript
-// Trend State Classification Algorithm
-function classifyTrendState(data, isHigherBetter) {
-  const recentValues = data.slice(-7);  // Last 7 data points
-  const avgChange = calculateAverageChange(recentValues);
-  
-  if (isHigherBetter) {
-    if (avgChange > 5) return 'IMPROVING';
-    if (avgChange < -5) return 'DECLINING';
-    return 'STABLE';
-  } else {
-    if (avgChange < -5) return 'IMPROVING';
-    if (avgChange > 5) return 'DECLINING';
-    return 'STABLE';
-  }
+**Score States:**
+
+| Score Range | State | Interpretation |
+|-------------|-------|----------------|
+| 0.81 - 1.00 | `green` | Excellent - optimal performance |
+| 0.61 - 0.31 | `yellow` | Moderate - room for improvement |
+| 0.30 - 0.00 | `red` | Suboptimal - attention needed |
+
+### Activity Score
+
+Measures overall physical activity levels by evaluating daily movement patterns.
+
+**Contributing Factors:**
+
+| Factor | Description | Unit |
+|--------|-------------|------|
+| `steps` | Total steps taken throughout the day | count |
+| `active_hours` | Hours with recorded activity or exercise | hours |
+| `active_calories` | Calories burned during active periods | kcal |
+| `intense_activity_duration` | Duration of moderate-to-vigorous activity | minutes |
+| `extended_inactivity` | Time spent sedentary without breaks | minutes |
+
+**Calculation Requirements:**
+- Minimum 3 contributing factors required
+- Essential data: Steps (from smartphone or wearable)
+- Score adjusts for missing data when possible
+
+### Sleep Score
+
+Evaluates sleep quality and quantity by analyzing rest patterns and their impact on recovery.
+
+**Contributing Factors:**
+
+| Factor | Description | Unit |
+|--------|-------------|------|
+| `sleep_duration` | Total sleep obtained during the night | minutes |
+| `sleep_regularity` | Consistency of bed/wake times across days | percent |
+| `sleep_continuity` | How uninterrupted the sleep period is | minutes |
+| `sleep_debt` | Accumulated sleep shortfall over time | hours |
+| `circadian_alignment` | Alignment with individual's circadian rhythm | minutes |
+| `physical_recovery` | Duration of deep sleep (slow-wave) cycles | minutes |
+| `mental_recovery` | Duration of REM sleep cycles | minutes |
+
+**Calculation Requirements:**
+- Minimum 3 contributing factors required
+- Essential data: Bed and wake times
+- Wearables required for sleep stage analysis (deep, REM)
+
+### Readiness Score
+
+Indicates preparedness to face daily challenges based on recovery from physical strain.
+
+**Contributing Factors:**
+
+| Factor | Description | Unit |
+|--------|-------------|------|
+| `sleep_duration` | Total time spent sleeping | minutes |
+| `physical_recovery` | Deep sleep amount for muscle repair | minutes |
+| `mental_recovery` | REM sleep for cognitive function | minutes |
+| `sleep_debt` | Accumulated sleep shortfall | hours |
+| `walking_strain_capacity` | Body's handling of low-intensity activity | index (0-1) |
+| `exercise_strain_capacity` | Body's coping with high-intensity activity | index (0-1) |
+| `resting_heart_rate` | Lower RHR indicates better recovery | bpm |
+| `heart_rate_variability` | Higher HRV suggests better stress resilience | ms |
+
+**Interpretation:**
+- **0.81 - 1.00**: Well-recovered, ready for high-intensity activities
+- **0.61 - 0.80**: Moderately recovered, suitable for moderate activities  
+- **0.41 - 0.60**: Limited recovery, prioritize lighter activities
+- **0.00 - 0.40**: Minimal recovery, focus on rest
+
+**Calculation Requirements:**
+- Minimum 4 contributing factors required
+- Essential data: Sleep duration + step events
+- Adapts to individual's unique lifestyle and habits (personalized baselines)
+
+### Factor Scoring
+
+Each factor within a score includes:
+```json
+{
+  "name": "steps",
+  "value": 9000,        // Actual measured value
+  "goal": 10000,        // Target for this factor
+  "unit": "count",      // Unit of measurement
+  "score": 0.93,        // Factor-level score (0-1)
+  "state": "high"       // Factor state
 }
-
-// Percent Change Calculation
-function calculatePercentChange(current, previous) {
-  if (previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-}
 ```
 
-### Comparison Percentile Calculation
-
-Athletes are compared against population baselines using percentile ranking:
-
-```javascript
-// Percentile Ranking Algorithm
-function calculatePercentile(value, populationData, isHigherBetter) {
-  const sorted = populationData.sort((a, b) => a - b);
-  const rank = sorted.filter(v => v < value).length;
-  const percentile = (rank / sorted.length) * 100;
-  
-  return isHigherBetter ? percentile : (100 - percentile);
-}
-```
-
-### Mood Index Composite Score
-
-Syntra calculates a composite "Mood Index" from multiple physiological signals:
-
-```
-Mood Index = (HRV_score × 0.30) + 
-             (Sleep_score × 0.25) + 
-             (Activity_score × 0.20) + 
-             (Recovery_score × 0.25)
-
-Where each component score is normalized to 0-100 scale
-based on individual baseline and population percentiles.
-```
+Factors are scored individually, then combined using weighted models to produce the overall health score. Missing factors return `null` and the algorithm adjusts weights accordingly.
 
 ---
 
@@ -238,18 +334,6 @@ All endpoints follow REST conventions with consistent response formatting:
 | `GET` | `/api/trainers/:id/players` | Get trainer's assigned athletes |
 | `POST` | `/api/trainers/:id/players` | Assign player to trainer |
 | `DELETE` | `/api/trainers/:id/players/:playerId` | Unassign player |
-
-### Query Parameters
-
-```bash
-# Filtering & Pagination
-GET /api/players?page=1&limit=10&search=john&sex=Male&minAge=18&maxAge=30
-
-# Trainer search
-GET /api/trainers?search=smith&page=1&limit=20
-```
-
----
 
 ## Security Implementation
 
@@ -355,43 +439,6 @@ services:
     depends_on: [server]
 ```
 
-### Performance Optimizations
-
-| Optimization | Implementation |
-|--------------|----------------|
-| **Database Indexing** | Compound indexes on Username, Name fields |
-| **Connection Pooling** | Mongoose connection pooling |
-| **Response Caching** | Redis for session and frequent queries |
-| **Gzip Compression** | Nginx-level response compression |
-| **Query Pagination** | Cursor-based pagination for large datasets |
-
----
-
-## User-Centered Design
-
-### Dual Dashboard System
-
-**Athlete Dashboard** — Personal health insights:
-- Real-time physiological metrics visualization
-- Historical trend analysis with charts
-- Personalized recovery recommendations
-- Sleep quality and activity breakdowns
-
-**Coach Dashboard** — Team health overview:
-- Aggregate team performance metrics
-- At-risk athlete identification
-- Comparative analytics across roster
-- Automated health status alerts
-
-### Key User Needs Addressed
-
-| User Pain Point | Syntra Solution |
-|-----------------|-----------------|
-| Athletes say "I'm fine" when they're not | Objective physiological data removes subjectivity |
-| Coaches lack visibility between sessions | Continuous monitoring via wearables |
-| Information overload from raw data | AI-summarized actionable insights |
-| Privacy concerns with health data | Athlete-controlled data sharing |
-
 ---
 
 ## Project Structure
@@ -425,61 +472,6 @@ syntra/
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- MongoDB 7.0+
-- Docker & Docker Compose (recommended)
-
-### Development Setup
-
-```bash
-# Clone repository
-git clone -b dev https://github.com/RayhanXD/HealthTech-Accessability.git
-cd HealthTech-Accessability
-
-# Install and run the mobile client
-cd client
-npm install
-npm run ios          # Start iOS simulator
-
-# In a separate terminal, start the backend server
-cd server
-npm install
-npm run dev          # Start development server with nodemon
-
-# Or run the full stack with Docker (backend + database)
-docker-compose up --build
-```
-
-### Environment Variables
-
-```env
-NODE_ENV=development
-PORT=3001
-MONGODB_URI=mongodb://localhost:27017/syntra_db
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your_jwt_secret_here
-```
-
-### Verify Installation
-
-```bash
-# Health check
-curl http://localhost:3001/health
-
-# Expected response
-{
-  "success": true,
-  "message": "Server is healthy",
-  "database": "connected"
-}
-```
-
----
-
 ## Team
 
 | Name | Role |
@@ -494,35 +486,6 @@ curl http://localhost:3001/health
 
 ---
 
-## Business Model
-
-| Tier | Price | Features |
-|------|-------|----------|
-| **Standard** | $25/month | Single team, <10 athletes |
-| **Premium** | $50/month | Single team, 10-30 athletes |
-| **Organization** | $400/month | Multiple teams, <10 coaches |
-
-### Market Opportunity
-
-- **TAM**: 800,000 trainers/coaches worldwide
-- **SAM**: 250,000 trainers/coaches in the US
-- **SOM**: 25,000 high school coaches in Texas
-
----
-
-## Roadmap
-
-- [x] Core API with player/trainer management
-- [x] MongoDB integration with Mongoose ODM
-- [x] Docker containerization
-- [x] Dual dashboard system
-- [ ] Automated health alerts
-- [ ] Customizable threshold settings
-- [ ] AI-powered insights and recommendations
-- [ ] Android wearable support
-
----
-
 ## Acknowledgments
 
 - **Texas Convergent** — For the platform and mentorship
@@ -533,6 +496,5 @@ curl http://localhost:3001/health
 ---
 
 <div align="center">
-  <p><strong>Built with 💜 by Texas Convergent</strong></p>
   <p><em>Bringing Synergy to Training</em></p>
 </div>
