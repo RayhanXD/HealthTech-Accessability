@@ -48,16 +48,37 @@ const registerPlayer = async (req, res) => {
     }
 
     // Create player
-    const player = new Player({
+    const playerData = {
       Email: email.toLowerCase(),
       Password: password,
       fName: firstName,
-      Lname: lastName,
-      Age: age || null,
-      Bodyweight_in_pounds: bodyweight_in_pounds || null,
-      Height_in_inches: height_in_inches || null,
-      SexAtBirth: sex_at_birth || null
-    });
+      Lname: lastName
+    };
+
+    // Only include optional fields if they are provided and valid
+    if (age !== undefined && age !== null && age !== '') {
+      const ageNum = Number(age);
+      if (!isNaN(ageNum) && ageNum >= 1 && ageNum <= 120) {
+        playerData.Age = ageNum;
+      }
+    }
+    if (bodyweight_in_pounds !== undefined && bodyweight_in_pounds !== null && bodyweight_in_pounds !== '') {
+      const weightNum = Number(bodyweight_in_pounds);
+      if (!isNaN(weightNum) && weightNum >= 1 && weightNum <= 1000) {
+        playerData.Bodyweight_in_pounds = weightNum;
+      }
+    }
+    if (height_in_inches !== undefined && height_in_inches !== null && height_in_inches !== '') {
+      const heightNum = Number(height_in_inches);
+      if (!isNaN(heightNum) && heightNum >= 1 && heightNum <= 120) {
+        playerData.Height_in_inches = heightNum;
+      }
+    }
+    if (sex_at_birth !== undefined && sex_at_birth !== null && sex_at_birth !== '' && ['Male', 'Female', 'Other'].includes(sex_at_birth)) {
+      playerData.SexAtBirth = sex_at_birth;
+    }
+
+    const player = new Player(playerData);
 
     await player.save();
 

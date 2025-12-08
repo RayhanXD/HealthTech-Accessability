@@ -46,8 +46,7 @@ const trainerSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-trainerSchema.index({ User: 1 });
-trainerSchema.index({ Email: 1 });
+// Note: User and Email indexes are automatically created by unique: true
 trainerSchema.index({ fName: 1, lname: 1 });
 
 // Pre-save middleware to hash password
