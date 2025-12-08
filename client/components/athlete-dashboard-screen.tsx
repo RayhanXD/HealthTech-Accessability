@@ -280,7 +280,7 @@ export default function AthleteDashboardScreen({ playerName, isCoachView = false
               </TouchableOpacity>
             )}
           </View>
-          <Text style={[styles.navTitle, isCoachView && styles.navTitleCoachView]}>
+          <Text style={styles.navTitle}>
             {isCoachView && playerName ? playerName : 'Welcome, Athlete'}
           </Text>
           <View style={styles.navIcons} />
@@ -785,13 +785,9 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     flex: 1,
-    color: SemanticColors.primary,
+    color: SemanticColors.textPrimary,
     fontSize: 32,
     fontWeight: Typography.fontWeight.semibold as any,
-    textAlign: 'center',
-  },
-  navTitleCoachView: {
-    color: SemanticColors.textPrimary,
     textAlign: 'left',
   },
   navIcons: {

@@ -39,21 +39,31 @@ const registerPlayer = async (req, res) => {
     }
 
     // Check if player already exists
-    const existingPlayer = await Player.findOne({ Email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log('Checking for existing player with email:', normalizedEmail);
+    
+    const existingPlayer = await Player.findOne({ Email: normalizedEmail });
     if (existingPlayer) {
+      console.log('Existing player found:', existingPlayer.Email, 'ID:', existingPlayer._id);
       return res.status(400).json({
         success: false,
         message: 'Player with this email already exists'
       });
     }
+    
+    console.log('No existing player found for email:', normalizedEmail, '- proceeding with registration');
 
     // Create player
     const playerData = {
-      Email: email.toLowerCase(),
+      Email: normalizedEmail,
       Password: password,
       fName: firstName,
-      Lname: lastName
+      Lname: lastName,
+      // Don't set Username - let it be undefined (not null) to avoid unique index conflicts
+      // Username is optional and has sparse unique index
     };
+    
+    console.log('Creating player with data:', { ...playerData, Password: '[REDACTED]' });
 
     // Only include optional fields if they are provided and valid
     if (age !== undefined && age !== null && age !== '') {
@@ -80,7 +90,46 @@ const registerPlayer = async (req, res) => {
 
     const player = new Player(playerData);
 
-    await player.save();
+    try {
+      await player.save();
+    } catch (saveError) {
+      console.error('Error saving player:', saveError);
+      // If it's a validation error, provide more details
+      if (saveError.name === 'ValidationError') {
+        const validationErrors = Object.values(saveError.errors).map(err => err.message).join(', ');
+        return res.status(400).json({
+          success: false,
+          message: `Validation error: ${validationErrors}`
+        });
+      }
+      // If it's a duplicate key error
+      if (saveError.code === 11000) {
+        // Check which field caused the duplicate
+        const duplicateField = saveError.keyPattern ? Object.keys(saveError.keyPattern)[0] : 'unknown';
+        console.error('Duplicate key error on field:', duplicateField);
+        console.error('Duplicate key value:', saveError.keyValue);
+        
+        if (duplicateField === 'Email') {
+          return res.status(400).json({
+            success: false,
+            message: 'Player with this email already exists'
+          });
+        } else if (duplicateField === 'Username') {
+          // This shouldn't happen if we don't set Username, but handle it just in case
+          console.error('Username duplicate error - this might be a database index issue');
+          return res.status(400).json({
+            success: false,
+            message: 'Registration error. Please try again or contact support.'
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: 'A player with this information already exists'
+          });
+        }
+      }
+      throw saveError;
+    }
 
     // Generate token
     const token = generateToken(player._id, 'player');
@@ -99,16 +148,31 @@ const registerPlayer = async (req, res) => {
     });
   } catch (error) {
     console.error('Error registering player:', error);
+    console.error('Error details:', {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // If it's a duplicate key error (MongoDB unique constraint violation)
     if (error.code === 11000) {
+      // Extract the field that caused the duplicate
+      const duplicateField = error.keyPattern ? Object.keys(error.keyPattern)[0] : 'email';
+      console.log('Duplicate key error on field:', duplicateField);
       return res.status(400).json({
         success: false,
         message: 'Player with this email already exists'
       });
     }
+    
+    // Return the actual error message for debugging
     res.status(500).json({
       success: false,
       message: 'Server error while registering player',
-      error: error.message
+      error: error.message,
+      errorName: error.name,
+      errorCode: error.code
     });
   }
 };

@@ -241,9 +241,19 @@ export default function CreateAccountScreen({
       }
     } catch (error: any) {
       console.error('Registration error:', error);
+      
+      // Extract error message
+      let errorMessage = error.message || 'An error occurred during registration. Please try again.';
+      
+      // Provide more helpful message for duplicate email
+      if (errorMessage.toLowerCase().includes('already exists') || 
+          errorMessage.toLowerCase().includes('email')) {
+        errorMessage = 'An account with this email already exists. Please try logging in instead.';
+      }
+      
       Alert.alert(
         'Registration Failed',
-        error.message || 'An error occurred during registration. Please try again.',
+        errorMessage,
         [{ text: 'OK' }]
       );
     } finally {
