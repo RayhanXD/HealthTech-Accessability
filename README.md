@@ -240,8 +240,6 @@ Measures overall physical activity levels by evaluating daily movement patterns.
 - Exercise intensity and duration
 - Sedentary time patterns
 
-**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
-
 ### Sleep Score
 Evaluates sleep quality and quantity by analyzing rest patterns and their impact on recovery.
 
@@ -252,8 +250,6 @@ Evaluates sleep quality and quantity by analyzing rest patterns and their impact
 - Sleep debt accumulation
 - Circadian alignment
 - Sleep stages (deep sleep, REM) - when available from wearables
-
-**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
 
 ### Readiness Score
 Indicates preparedness to face daily challenges based on recovery from physical strain.
@@ -272,8 +268,6 @@ Indicates preparedness to face daily challenges based on recovery from physical 
 - **60-79**: Moderately recovered, suitable for moderate activities
 - **40-59**: Limited recovery, prioritize lighter activities
 - **0-39**: Minimal recovery, focus on rest
-
-**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
 
 ## Data Storage
 
@@ -317,24 +311,6 @@ Array of comparison data showing current values vs. baselines:
   State: String,
   Properties: Object
 }## API Integration
-
-### Sahha API Integration
-- **Service**: `server/services/sahhaService.js`
-- **Controller**: `server/controllers/sahhaController.js`
-- **Routes**: `server/routes/sahhaRoutes.js`
-
-### Key Endpoints
-- `GET /api/sahha/scores/:sahhaProfileId` - Get health scores
-- `GET /api/sahha/insights/:sahhaProfileId` - Get trends and comparisons
-- `POST /api/sahha/sync/:sahhaProfileId` - Sync all Sahha data to player Insights
-
-### Data Flow
-1. Player registers and creates Sahha profile
-2. Sahha API analyzes health data from connected sources
-3. Scores and insights are fetched via API
-4. Data is transformed to match Player Insights schema
-5. Insights are stored in MongoDB
-6. Frontend displays scores and trends
 
 ## Notes
 
