@@ -194,103 +194,155 @@ We use MongoDB with Mongoose ODM for flexible, document-based storage optimized 
 
 ---
 
-## Algorithm Implementation
+### Score States
 
-### Score Computation Model
+| Score Range | State | Color | Interpretation |
+|-------------|-------|-------|----------------|
+| 80 - 100 | good | Green | Excellent - optimal performance |
+| 60 - 79 | caution | Yellow | Moderate - room for improvement |
+| 0 - 59 | atRisk | Red | Suboptimal - attention needed |
 
-Health scores are derived from complex models that analyze various user data points. Each score produces a value between 0.0 and 1.0, with explainability factors that highlight which specific behaviors are contributing positively or negatively.
+## Overall Health Score (AHS)
 
-**Score States:**
+The **Overall Health Score (AHS)** is the primary metric displayed on the athlete dashboard. It represents a composite health score that synthesizes multiple health factors.
 
-| Score Range | State | Interpretation |
-|-------------|-------|----------------|
-| 0.81 - 1.00 | `green` | Excellent - optimal performance |
-| 0.61 - 0.31 | `yellow` | Moderate - room for improvement |
-| 0.30 - 0.00 | `red` | Suboptimal - attention needed |
+### Display
+- **Location**: Athlete Dashboard (primary metric)
+- **Format**: Circular progress indicator showing percentage (0-100)
+- **Status Ring**: Color-coded ring around the circle indicating health status
+  - Green: 80-100 (good)
+  - Yellow: 60-79 (caution)
+  - Red: 0-59 (atRisk)
+
+### Additional Information Shown
+- **Recovery Timeline Estimate**: Estimated days until full recovery
+- **Last Updated**: Timestamp of last data sync
+- **Trend Indicator**: Shows improvement or decline (when available)
+
+### Data Source
+The AHS is derived from Sahha API health scores, which analyze:
+- Activity patterns
+- Sleep quality and duration
+- Heart rate metrics (RHR, HRV, HR Recovery)
+- Recovery indicators
+
+## Health Scores from Sahha API
+
+The following scores are provided by the Sahha API and stored in the player's Insights:
 
 ### Activity Score
-
 Measures overall physical activity levels by evaluating daily movement patterns.
 
-**Contributing Factors:**
+**Data Source**: Sahha API analysis of:
+- Steps (from smartphone or wearable)
+- Active hours/duration
+- Active calories burned
+- Exercise intensity and duration
+- Sedentary time patterns
 
-| Factor | Description | Unit |
-|--------|-------------|------|
-| `steps` | Total steps taken throughout the day | count |
-| `active_hours` | Hours with recorded activity or exercise | hours |
-| `active_calories` | Calories burned during active periods | kcal |
-| `intense_activity_duration` | Duration of moderate-to-vigorous activity | minutes |
-| `extended_inactivity` | Time spent sedentary without breaks | minutes |
-
-**Calculation Requirements:**
-- Minimum 3 contributing factors required
-- Essential data: Steps (from smartphone or wearable)
-- Score adjusts for missing data when possible
+**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
 
 ### Sleep Score
-
 Evaluates sleep quality and quantity by analyzing rest patterns and their impact on recovery.
 
-**Contributing Factors:**
+**Data Source**: Sahha API analysis of:
+- Sleep duration
+- Sleep regularity/consistency
+- Sleep continuity (uninterrupted periods)
+- Sleep debt accumulation
+- Circadian alignment
+- Sleep stages (deep sleep, REM) - when available from wearables
 
-| Factor | Description | Unit |
-|--------|-------------|------|
-| `sleep_duration` | Total sleep obtained during the night | minutes |
-| `sleep_regularity` | Consistency of bed/wake times across days | percent |
-| `sleep_continuity` | How uninterrupted the sleep period is | minutes |
-| `sleep_debt` | Accumulated sleep shortfall over time | hours |
-| `circadian_alignment` | Alignment with individual's circadian rhythm | minutes |
-| `physical_recovery` | Duration of deep sleep (slow-wave) cycles | minutes |
-| `mental_recovery` | Duration of REM sleep cycles | minutes |
-
-**Calculation Requirements:**
-- Minimum 3 contributing factors required
-- Essential data: Bed and wake times
-- Wearables required for sleep stage analysis (deep, REM)
+**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
 
 ### Readiness Score
-
 Indicates preparedness to face daily challenges based on recovery from physical strain.
 
-**Contributing Factors:**
+**Data Source**: Sahha API analysis of:
+- Sleep duration and quality
+- Physical recovery indicators (deep sleep)
+- Mental recovery indicators (REM sleep)
+- Sleep debt
+- Activity strain capacity
+- Resting heart rate (RHR)
+- Heart rate variability (HRV)
 
-| Factor | Description | Unit |
-|--------|-------------|------|
-| `sleep_duration` | Total time spent sleeping | minutes |
-| `physical_recovery` | Deep sleep amount for muscle repair | minutes |
-| `mental_recovery` | REM sleep for cognitive function | minutes |
-| `sleep_debt` | Accumulated sleep shortfall | hours |
-| `walking_strain_capacity` | Body's handling of low-intensity activity | index (0-1) |
-| `exercise_strain_capacity` | Body's coping with high-intensity activity | index (0-1) |
-| `resting_heart_rate` | Lower RHR indicates better recovery | bpm |
-| `heart_rate_variability` | Higher HRV suggests better stress resilience | ms |
+**Interpretation**:
+- **80-100**: Well-recovered, ready for high-intensity activities
+- **60-79**: Moderately recovered, suitable for moderate activities
+- **40-59**: Limited recovery, prioritize lighter activities
+- **0-39**: Minimal recovery, focus on rest
 
-**Interpretation:**
-- **0.81 - 1.00**: Well-recovered, ready for high-intensity activities
-- **0.61 - 0.80**: Moderately recovered, suitable for moderate activities  
-- **0.41 - 0.60**: Limited recovery, prioritize lighter activities
-- **0.00 - 0.40**: Minimal recovery, focus on rest
+**API Endpoint**: `/api/sahha/scores/:sahhaProfileId`
 
-**Calculation Requirements:**
-- Minimum 4 contributing factors required
-- Essential data: Sleep duration + step events
-- Adapts to individual's unique lifestyle and habits (personalized baselines)
+## Data Storage
 
-### Factor Scoring
+### Insights Schema
+Health data is stored in the Player model's `Insights` field, which contains:
 
-Each factor within a score includes:
-```json
+#### Trends
+Array of trend data showing changes over time:t
 {
-  "name": "steps",
-  "value": 9000,        // Actual measured value
-  "goal": 10000,        // Target for this factor
-  "unit": "count",      // Unit of measurement
-  "score": 0.93,        // Factor-level score (0-1)
-  "state": "high"       // Factor state
-}
-```
+  Category: String,        // e.g., "Activity", "Sleep", "Readiness"
+  Name: String,            // Specific metric name
+  State: String,           // "high", "medium", "low"
+  isHigherBetter: Boolean,
+  valueRange: Number,
+  Unit: String,
+  trendStartTime: String,
+  trendEndTime: String,
+  Data: [{
+    StartDateTime: String,
+    endDateTime: String,
+    Value: Number,
+    percentChangeFromPrevious: Number
+  }]
+}#### Comparisons
+Array of comparison data showing current values vs. baselines:
+{
+  Category: String,
+  Name: String,
+  Value: String,
+  Unit: String,
+  isHigherBetter: Boolean,
+  startDateTime: String,
+  endDateTime: String,
+  Data: [{
+    Type: String,
+    Value: String
+  }],
+  Percentile: Number,
+  Difference: String,
+  percentageDifference: String,
+  State: String,
+  Properties: Object
+}## API Integration
 
-Factors are scored individually, then combined using weighted models to produce the overall health score. Missing factors return `null` and the algorithm adjusts weights accordingly.
+### Sahha API Integration
+- **Service**: `server/services/sahhaService.js`
+- **Controller**: `server/controllers/sahhaController.js`
+- **Routes**: `server/routes/sahhaRoutes.js`
+
+### Key Endpoints
+- `GET /api/sahha/scores/:sahhaProfileId` - Get health scores
+- `GET /api/sahha/insights/:sahhaProfileId` - Get trends and comparisons
+- `POST /api/sahha/sync/:sahhaProfileId` - Sync all Sahha data to player Insights
+
+### Data Flow
+1. Player registers and creates Sahha profile
+2. Sahha API analyzes health data from connected sources
+3. Scores and insights are fetched via API
+4. Data is transformed to match Player Insights schema
+5. Insights are stored in MongoDB
+6. Frontend displays scores and trends
+
+## Notes
+
+- **Score Calculation**: All scores are calculated by Sahha API, not custom algorithms
+- **Data Requirements**: Minimum data requirements are determined by Sahha API
+- **Missing Data**: Sahha API handles missing data and adjusts scores accordingly
+- **Personalization**: Sahha API provides personalized baselines based on individual patterns
+- **Real-time Updates**: Scores update as new health data is synced from wearables
 
 ---
 
