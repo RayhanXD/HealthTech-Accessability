@@ -71,12 +71,12 @@ npm start          # Start development server
 ### Environment Variables
 
 ```env
-MONGODB_URI=mongodb+srv://RayhanM:TeslaModel32024@convergent.rp9jupu.mongodb.net/?appName=convergent
-SAHHA_API_BASE_URL=https://sandbox-api.sahha.ai
-SAHHA_AUTH_BASE_URL=https://app.sahha.ai
+MONGODB_URI=YOUR_MONGODB_URI
+SAHHA_API_BASE_URL=YOUR_SAHHA_API_BASE_URL
+SAHHA_AUTH_BASE_URL=YOUR_SAHHA_AUTH_BASE_URL
 SAHHA_ENVIRONMENT=sandbox
-SAHHA_CLIENT_ID=sNueKtNAWveFAQP42gxX6EkWe4ZfkRVs
-SAHHA_CLIENT_SECRET=9zrrNLfNoh3RRzWcBt70WgMmpwdi1ZVJGInxYRPvhHYugTAPlXGHGxL2kLomq3dc
+SAHHA_CLIENT_ID=YOUR_SAHHA_CLIENT_ID
+SAHHA_CLIENT_SECRET=YOUR_SAHHA_CLIENT_SECRET
 ```
 
 ---
